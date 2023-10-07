@@ -1,10 +1,8 @@
 #pragma once
-
-#pragma once
 #include "SDL.h"
 #include "SDL_image.h"
 #include "SDL_vulkan.h"
-#include "vulkan/vulkan.h"
+#include "vulkan/vulkan.hpp"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE

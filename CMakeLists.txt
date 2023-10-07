@@ -27,7 +27,7 @@ include(cmake/FindSDL2.cmake)
 include(cmake/FindSDL2_image.cmake)
 include(cmake/findVulkan.cmake)
 
-set(ProjectName "skToyRenderer")
+set(ProjectName "sktr")
 
 find_program(GLSLC_PROGRAM glslc REQUIRED)
 execute_process(COMMAND ${GLSLC_PROGRAM} ${CMAKE_SOURCE_DIR}/shaders/shader.vert -o ${CMAKE_SOURCE_DIR}/shaders/vert.spv)
@@ -38,9 +38,17 @@ file(GLOB_RECURSE SRC "src/*.cpp")
 
 add_library(${ProjectName} STATIC ${SRC} ${HEADER})
 target_precompile_headers(${ProjectName} PUBLIC "src/pch.hpp")
-target_include_directories(${ProjectName} PUBLIC ${HEADER})
+target_include_directories(${ProjectName} PUBLIC "src")
 target_link_libraries(${ProjectName} PUBLIC Vulkan::Vulkan)
 target_link_libraries(${ProjectName} PUBLIC SDL2 SDL2_image)
 target_compile_features(${ProjectName} PUBLIC cxx_std_17)
 
-# add_subdirectory(sandbox)
+option(SKTR_BUILD_DEMO "build demo" OFF)
+
+if(PROJECT_IS_TOP_LEVEL)
+    set(SKTR_BUILD_DEMO ON)
+endif()
+
+if(SKTR_BUILD_DEMO)
+    add_subdirectory(demo)
+endif()
