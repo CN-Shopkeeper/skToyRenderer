@@ -209,7 +209,7 @@ bool Context::isDeviceSuitable(vk::PhysicalDevice physicalDevice) {
   bool swapChainAdequate = false;
   if (extensionsSupported) {
     SwapChainSupportDetails swapChainSupport =
-        querySwapChainSupport(physicalDevice);
+        QuerySwapChainSupport(physicalDevice);
     swapChainAdequate = !swapChainSupport.formats.empty() &&
                         !swapChainSupport.presentModes.empty();
   }
@@ -237,7 +237,7 @@ bool Context::checkDeviceExtensionSupport(vk::PhysicalDevice physicalDevice) {
   return requiredExtensions.empty();
 }
 
-SwapChainSupportDetails Context::querySwapChainSupport(
+SwapChainSupportDetails Context::QuerySwapChainSupport(
     vk::PhysicalDevice device) {
   SwapChainSupportDetails details;
   details.capabilities = device.getSurfaceCapabilitiesKHR(surface);

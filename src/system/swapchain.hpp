@@ -19,12 +19,6 @@
 
 namespace sktr {
 class Swapchain final {
- private:
-  void queryInfo(int w, int h);
-  void getImages();
-  // imageView是对image的视图，读取时不会直接对image进行操作。可以修改读取image的方式
-  void createImageViews();
-
  public:
   vk::SwapchainKHR swapchain;
   Swapchain(int w, int h);
@@ -53,5 +47,17 @@ class Swapchain final {
   std::vector<vk::Framebuffer> framebuffers;
 
   void CreateFramebuffers(int w, int h);
+
+ private:
+  void queryInfo(int w, int h);
+
+  // imageView是对image的视图，读取时不会直接对image进行操作。可以修改读取image的方式
+  void createImageViews();
+
+  vk::SurfaceFormatKHR chooseSwapSurfaceFormat(
+      const std::vector<vk::SurfaceFormatKHR>& availableFormats);
+  vk::PresentModeKHR chooseSwapPresentMode(
+      const std::vector<vk::PresentModeKHR>& availablePresentModes);
+  vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
 };
 }  // namespace sktr

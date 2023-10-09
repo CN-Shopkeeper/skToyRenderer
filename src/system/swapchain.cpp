@@ -6,7 +6,7 @@ namespace sktr {
 
 Swapchain::Swapchain(int w, int h) {
   queryInfo(w, h);
-  auto swapchainInfo = vk::SwapchainCreateInfoKHR();
+  auto swapchainInfo = vk::SwapchainCreateInfoKHR{};
   swapchainInfo
       .setClipped(true)
       // vuklan底层的图片都是存在数组里面，ArrayLayer是多层的数组
@@ -21,7 +21,8 @@ Swapchain::Swapchain(int w, int h) {
       .setImageExtent(info.imageExtent)
       .setMinImageCount(info.imageCount)
       .setPresentMode(info.present)
-      .setPreTransform(info.transform);
+      .setPreTransform(info.transform)
+      .setOldSwapchain(nullptr);
   auto& queueIndices = Context::GetInstance().queueFamilyIndices;
   if (queueIndices.graphicsQueue.value() ==
       /* 是否使用set更好？*/
@@ -36,7 +37,9 @@ Swapchain::Swapchain(int w, int h) {
   }
 
   swapchain = Context::GetInstance().device.createSwapchainKHR(swapchainInfo);
-  getImages();
+
+  images = Context::GetInstance().device.getSwapchainImagesKHR(swapchain);
+
   createImageViews();
 }
 
@@ -52,41 +55,24 @@ Swapchain::~Swapchain() {
 }
 
 void Swapchain::queryInfo(int w, int h) {
-  auto& phyDevice = Context::GetInstance().phyDevice;
-  auto& surface = Context::GetInstance().surface;
+  auto& ctx = Context::GetInstance();
+  auto& phyDevice = ctx.phyDevice;
+  auto& surface = ctx.surface;
+
   // 支持的surface格式
-  auto formats = phyDevice.getSurfaceFormatsKHR(surface);
-  info.format = formats[0];
-  for (const auto& format : formats) {
-    if (format.format == vk::Format::eR8G8B8A8Srgb &&
-        format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
-      info.format = format;
-      break;
-    }
-  }
+  SwapChainSupportDetails details = ctx.QuerySwapChainSupport(phyDevice);
+  info.format = chooseSwapSurfaceFormat(details.formats);
 
-  auto capabilities = phyDevice.getSurfaceCapabilitiesKHR(surface);
-  // 双缓冲
-  info.imageCount = std::clamp<unsigned int>(2, capabilities.minImageCount,
-                                             capabilities.maxImageCount);
-  info.imageExtent.width = std::clamp<unsigned int>(
-      w, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-  info.imageExtent.height =
-      std::clamp<unsigned int>(h, capabilities.minImageExtent.height,
-                               capabilities.maxImageExtent.height);
-  info.transform = capabilities.currentTransform;
-  auto presents = phyDevice.getSurfacePresentModesKHR(surface);
-  info.present = vk::PresentModeKHR::eFifo;
-  for (const auto& present : presents) {
-    if (present == vk::PresentModeKHR::eMailbox) {
-      info.present = present;
-      break;
-    }
-  }
-}
+  // 多缓冲，多少张图像可以在swapchain中渲染
+  info.imageCount = std::clamp<unsigned int>(
+      details.capabilities.minImageCount + 1,
+      details.capabilities.minImageCount, details.capabilities.maxImageCount);
 
-void Swapchain::getImages() {
-  images = Context::GetInstance().device.getSwapchainImagesKHR(swapchain);
+  info.imageExtent = chooseSwapExtent(details.capabilities);
+
+  info.transform = details.capabilities.currentTransform;
+
+  info.present = chooseSwapPresentMode(details.presentModes);
 }
 
 void Swapchain::createImageViews() {
@@ -130,4 +116,46 @@ void Swapchain::CreateFramebuffers(int w, int h) {
         Context::GetInstance().device.createFramebuffer(framebufferInfo);
   }
 }
+
+vk::SurfaceFormatKHR chooseSwapSurfaceFormat(
+    const std::vector<vk::SurfaceFormatKHR>& availableFormats) {
+  for (const auto& availableFormat : availableFormats) {
+    if (availableFormat.format == vk::Format::eB8G8R8A8Srgb &&
+        availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
+      return availableFormat;
+    }
+  }
+  return availableFormats[0];
+}
+
+vk::PresentModeKHR chooseSwapPresentMode(
+    const std::vector<vk::PresentModeKHR>& availablePresentModes) {
+  for (const auto& availablePresentMode : availablePresentModes) {
+    if (availablePresentMode == vk::PresentModeKHR::eMailbox) {
+      return availablePresentMode;
+    }
+  }
+  return vk::PresentModeKHR::eFifo;
+}
+
+vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities,
+                              int width, int height) {
+  if (capabilities.currentExtent.width !=
+      std::numeric_limits<uint32_t>::max()) {
+    return capabilities.currentExtent;
+  } else {
+    vk::Extent2D actualExtent = {static_cast<uint32_t>(width),
+                                 static_cast<uint32_t>(height)};
+
+    actualExtent.width =
+        std::clamp(actualExtent.width, capabilities.minImageExtent.width,
+                   capabilities.maxImageExtent.width);
+    actualExtent.height =
+        std::clamp(actualExtent.height, capabilities.minImageExtent.height,
+                   capabilities.maxImageExtent.height);
+
+    return actualExtent;
+  }
+}
+
 }  // namespace sktr

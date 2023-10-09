@@ -46,6 +46,8 @@ class Context final : public Singlton<Context> {
   void DestroyRenderProcess() { renderProcess.reset(); }
   void DestroySampler() { device.destroySampler(sampler.sampler); }
 
+  SwapChainSupportDetails QuerySwapChainSupport(vk::PhysicalDevice device);
+
  private:
   Context(const std::vector<const char *> &extensions, CreateSurfaceFunc func);
 
@@ -59,7 +61,6 @@ class Context final : public Singlton<Context> {
   QueueFamilyIndices Context::queryQueueFamilyIndices(
       vk::PhysicalDevice physicalDevice);
   bool checkDeviceExtensionSupport(vk::PhysicalDevice);
-  SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device);
   bool isDeviceSuitable(vk::PhysicalDevice);
   vk::SampleCountFlagBits getMaxUsableSampleCount();
 };

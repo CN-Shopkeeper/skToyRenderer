@@ -57,7 +57,7 @@ void Texture::updateDescriptorSet() {
   vk::DescriptorImageInfo imageInfo;
   imageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
       .setImageView(view)
-      .setSampler(Context::GetInstance().sampler);
+      .setSampler(Context::GetInstance().sampler.sampler);
   writer.setImageInfo(imageInfo)
       .setDstBinding(0)
       .setDstArrayElement(0)
