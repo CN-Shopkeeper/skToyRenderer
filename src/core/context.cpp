@@ -9,10 +9,7 @@ Context::Context(const std::vector<const char*>& extensions,
   createInstance(extensions);
   GetSurface();
   pickupPhysicalDevice();
-
-  queryQueueFamilyIndices();
   createDevice();
-  getQueues();
 }
 
 Context::~Context() {
@@ -49,10 +46,10 @@ void Context::createInstance(const std::vector<const char*>& extensions) {
 
 bool Context::checkValidationLayerSupport() {
   uint32_t layerCount;
-  vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+  vk::enumerateInstanceLayerProperties(&layerCount, nullptr);
 
-  std::vector<VkLayerProperties> availableLayers(layerCount);
-  vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+  std::vector<vk::LayerProperties> availableLayers(layerCount);
+  vk::enumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
   for (const char* layerName : ValidationLayers) {
     bool layerFound = false;
@@ -78,9 +75,17 @@ void Context::pickupPhysicalDevice() {
   if (devices.size() == 0) {
     throw std::runtime_error("failed to find GPUs with Vulkan support!");
   }
-  phyDevice = devices[0];
-  //  * NVIDIA GeForce RTX 4060 Laptop GPU
-  // std::cout << phyDevice.getProperties().deviceName << std::endl;
+  for (const auto& device : devices) {
+    if (isDeviceSuitable(device)) {
+      phyDevice = device;
+      queueFamilyIndices = queryQueueFamilyIndices(device);
+      sampler.msaaSamples = getMaxUsableSampleCount();
+      break;
+    }
+  }
+  if (phyDevice == nullptr) {
+    throw std::runtime_error("failed to find a suitable GPU!");
+  }
 }
 
 void Context::createDevice() {
@@ -89,12 +94,10 @@ void Context::createDevice() {
   // phyDevice.enumerateDeviceExtensionProperties();
   // phyDevice.enumerateDeviceLayerProperties();
 
-  // 加入Swapchain的拓展
-  std::array extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
   vk::DeviceCreateInfo deviceInfo;
   // 逻辑设备与物理设备通过Command queue进行打交道
   std::vector<vk::DeviceQueueCreateInfo> deviceQueueInfos;
-  float prior = 1.0;
+  float prior = 1.0f;
   if (queueFamilyIndices.presentQueue.value() ==
       queueFamilyIndices.graphicsQueue.value()) {
     vk::DeviceQueueCreateInfo deviceQueueInfo;
@@ -114,12 +117,34 @@ void Context::createDevice() {
     deviceQueueInfos.push_back(deviceQueueInfo);
   }
 
+  // 采样
+  vk::PhysicalDeviceFeatures deviceFeatures{};
+  deviceFeatures.samplerAnisotropy = vk::True;
+  // enable sample shading feature for the device
+  deviceFeatures.sampleRateShading = vk::True;
+
   deviceInfo.setQueueCreateInfos(deviceQueueInfos)
-      .setPEnabledExtensionNames(extensions);
+      .setPEnabledFeatures(&deviceFeatures);
+
+  // 加入Swapchain的拓展
+  std::vector<const char*> extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+  if (EnableValidationLayers) {
+    // 在新版本里面逻辑设备和instance只需要设置一个validation layers
+    extensions.insert(extensions.end(), DeviceExtensions.begin(),
+                      DeviceExtensions.end());
+  }
+  deviceInfo.setPEnabledExtensionNames(extensions);
+
   device = phyDevice.createDevice(deviceInfo);
+
+  // 从硬件中获取queue，并且队列只有一个则下标为0
+  graphicsQueue = device.getQueue(queueFamilyIndices.graphicsQueue.value(), 0);
+  presentQueue = device.getQueue(queueFamilyIndices.presentQueue.value(), 0);
 }
 
-void Context::queryQueueFamilyIndices() {
+QueueFamilyIndices Context::queryQueueFamilyIndices(
+    vk::PhysicalDevice physicalDevice) {
+  QueueFamilyIndices queueFamilyIndices_;
   // 所有队列的属性
   auto properties = phyDevice.getQueueFamilyProperties();
   for (int i = 0; i < properties.size(); i++) {
@@ -127,22 +152,17 @@ void Context::queryQueueFamilyIndices() {
     if (property.queueFlags | vk::QueueFlagBits::eGraphics) {
       // 最多可以创建多少个queue，因为只创建了一个，所以不需要检查
       // property.queueCount;
-      queueFamilyIndices.graphicsQueue = i;
+      queueFamilyIndices_.graphicsQueue = i;
     }
     if (phyDevice.getSurfaceSupportKHR(i, surface)) {
-      queueFamilyIndices.presentQueue = i;
+      queueFamilyIndices_.presentQueue = i;
     }
 
-    if (queueFamilyIndices) {
+    if (queueFamilyIndices_) {
       break;
     }
   }
-}
-
-void Context::getQueues() {
-  // 从硬件中获取queue，并且队列只有一个则下标为0
-  graphicsQueue = device.getQueue(queueFamilyIndices.graphicsQueue.value(), 0);
-  presentQueue = device.getQueue(queueFamilyIndices.presentQueue.value(), 0);
+  return queueFamilyIndices_;
 }
 
 void Context::InitSampler() {
@@ -171,7 +191,7 @@ void Context::InitSampler() {
       .setCompareEnable(false)
       // .setCompareOp()
       .setMipmapMode(vk::SamplerMipmapMode::eLinear);
-  sampler = Context::GetInstance().device.createSampler(createInfo);
+  sampler.sampler = Context::GetInstance().device.createSampler(createInfo);
 }
 
 void Context::GetSurface() {
@@ -179,6 +199,79 @@ void Context::GetSurface() {
   if (!surface) {
     throw std::runtime_error("surface is nullptr");
   }
+}
+
+bool Context::isDeviceSuitable(vk::PhysicalDevice physicalDevice) {
+  QueueFamilyIndices queueFamilyIndices_ =
+      queryQueueFamilyIndices(physicalDevice);
+  auto extensionsSupported = checkDeviceExtensionSupport(physicalDevice);
+
+  bool swapChainAdequate = false;
+  if (extensionsSupported) {
+    SwapChainSupportDetails swapChainSupport =
+        querySwapChainSupport(physicalDevice);
+    swapChainAdequate = !swapChainSupport.formats.empty() &&
+                        !swapChainSupport.presentModes.empty();
+  }
+  vk::PhysicalDeviceFeatures supportedFeatures = physicalDevice.getFeatures();
+
+  return queueFamilyIndices_ && extensionsSupported && swapChainAdequate &&
+         supportedFeatures.samplerAnisotropy;
+}
+
+bool Context::checkDeviceExtensionSupport(vk::PhysicalDevice physicalDevice) {
+  uint32_t extensionCount;
+  physicalDevice.enumerateDeviceExtensionProperties(nullptr, &extensionCount,
+                                                    nullptr);
+  std::vector<vk::ExtensionProperties> availableExtensions(extensionCount);
+  physicalDevice.enumerateDeviceExtensionProperties(nullptr, &extensionCount,
+                                                    availableExtensions.data());
+
+  std::set<std::string> requiredExtensions(DeviceExtensions.begin(),
+                                           DeviceExtensions.end());
+
+  for (const auto& extension : availableExtensions) {
+    requiredExtensions.erase(extension.extensionName);
+  }
+
+  return requiredExtensions.empty();
+}
+
+SwapChainSupportDetails Context::querySwapChainSupport(
+    vk::PhysicalDevice device) {
+  SwapChainSupportDetails details;
+  details.capabilities = device.getSurfaceCapabilitiesKHR(surface);
+  details.formats = device.getSurfaceFormatsKHR(surface);
+  details.presentModes = device.getSurfacePresentModesKHR(surface);
+  return details;
+}
+
+vk::SampleCountFlagBits Context::getMaxUsableSampleCount() {
+  vk::PhysicalDeviceProperties physicalDeviceProperties =
+      phyDevice.getProperties();
+  vk::SampleCountFlags counts =
+      physicalDeviceProperties.limits.framebufferColorSampleCounts &
+      physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+  if (counts & vk::SampleCountFlagBits::e64) {
+    return vk::SampleCountFlagBits::e64;
+  }
+  if (counts & vk::SampleCountFlagBits::e32) {
+    return vk::SampleCountFlagBits::e32;
+  }
+  if (counts & vk::SampleCountFlagBits::e16) {
+    return vk::SampleCountFlagBits::e16;
+  }
+  if (counts & vk::SampleCountFlagBits::e8) {
+    return vk::SampleCountFlagBits::e8;
+  }
+  if (counts & vk::SampleCountFlagBits::e4) {
+    return vk::SampleCountFlagBits::e4;
+  }
+  if (counts & vk::SampleCountFlagBits::e2) {
+    return vk::SampleCountFlagBits::e2;
+  }
+
+  return vk::SampleCountFlagBits::e1;
 }
 
 }  // namespace sktr
