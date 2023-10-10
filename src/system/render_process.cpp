@@ -8,7 +8,7 @@ namespace sktr {
 
 RenderProcess::RenderProcess(int w, int h) {
   initRenderPass();
-  initLayout();
+  initPipelineLayout();
   pipelineCache_ = createPipelineCache();
   initPipeline(w, h);
 }
@@ -17,7 +17,7 @@ RenderProcess::~RenderProcess() {
   auto& device = Context::GetInstance().device;
   device.destroyPipelineCache(pipelineCache_);
   device.destroyRenderPass(renderPass);
-  device.destroyPipelineLayout(layout);
+  device.destroyPipelineLayout(pipelineLayout);
   device.destroyPipeline(graphicsPipelineWithLineTopology);
   device.destroyPipeline(graphicsPipelineWithTriangleTopology);
 }
@@ -25,6 +25,16 @@ RenderProcess::~RenderProcess() {
 vk::Pipeline RenderProcess::createPipeline(int width, int height,
                                            vk::PrimitiveTopology topology) {
   vk::GraphicsPipelineCreateInfo graphicsPipelineInfo;
+
+  // dynamic state
+
+  std::vector<vk::DynamicState> dynamicStates = {vk::DynamicState::eViewport,
+                                                 vk::DynamicState::eScissor};
+  auto& ctx = Context::GetInstance();
+
+  vk::PipelineDynamicStateCreateInfo dynamicStateInfo{};
+  dynamicStateInfo.setDynamicStates(dynamicStates);
+  graphicsPipelineInfo.setPDynamicState(&dynamicStateInfo);
 
   // 1. vertex input
   vk::PipelineVertexInputStateCreateInfo pipelineVertexInputeStateInfo;
@@ -69,23 +79,37 @@ vk::Pipeline RenderProcess::createPipeline(int width, int height,
       // 面剔除
       .setCullMode(vk::CullModeFlagBits::eBack)
       // 正面方向
-      .setFrontFace(vk::FrontFace::eClockwise)
+      .setFrontFace(vk::FrontFace::eCounterClockwise)
       // 多边形的填充模式
       .setPolygonMode(vk::PolygonMode::eFill)
       // 边框的宽度
-      .setLineWidth(1);
+      .setLineWidth(1)
+      .setDepthBiasEnable(vk::False);
   graphicsPipelineInfo.setPRasterizationState(&pipelineRasterizationStateInfo);
 
   // 6. multisample
   vk::PipelineMultisampleStateCreateInfo multisampleStateInfo;
   multisampleStateInfo
       // 不进行超采样
-      .setSampleShadingEnable(false)
+      .setSampleShadingEnable(vk::True)
       // 在光栅化时进行的采样
-      .setRasterizationSamples(vk::SampleCountFlagBits::e1);
+      .setRasterizationSamples(ctx.sampler.msaaSamples)
+      .setMinSampleShading(.2f);
   graphicsPipelineInfo.setPMultisampleState(&multisampleStateInfo);
 
   // 7. test - stencil test, depth test
+  vk::PipelineDepthStencilStateCreateInfo depthStencilInfo{};
+  depthStencilInfo.setDepthTestEnable(vk::True)
+      .setDepthWriteEnable(vk::True)
+      .setDepthCompareOp(vk::CompareOp::eLess)
+      .setDepthBoundsTestEnable(vk::False)
+      .setMinDepthBounds(0.0f)
+      .setMaxDepthBounds(1.0f)
+      .setStencilTestEnable(vk::False)
+      // .setFront()
+      // .setBack()
+      ;
+  graphicsPipelineInfo.setPDepthStencilState(&depthStencilInfo);
 
   // 8. color blending
   /*
@@ -117,14 +141,7 @@ vk::Pipeline RenderProcess::createPipeline(int width, int height,
   graphicsPipelineInfo.setPColorBlendState(&colorBlendStateInfo);
 
   // 9. renderPass and layout
-  graphicsPipelineInfo.setRenderPass(renderPass).setLayout(layout);
-
-  // dynamic stage
-  // 如是设置完之后，需要在每次渲染时对cmdBuff重新设置，如cmdBuff.setViewport
-  // vk::PipelineDynamicStateCreateInfo dynamic;
-  // auto dynamicStateFlags = vk::DynamicState::eViewport;
-  // dynamic.setDynamicStates(dynamicStateFlags);
-  // graphicsPipelineInfo.setPDynamicState(&dynamic);
+  graphicsPipelineInfo.setRenderPass(renderPass).setLayout(pipelineLayout);
 
   auto result = Context::GetInstance().device.createGraphicsPipeline(
       // pipeline cache 是黑盒，不需要关心里面存了什么
@@ -144,14 +161,15 @@ void RenderProcess::initPipeline(int width, int height) {
       createPipeline(width, height, vk::PrimitiveTopology::eLineList);
 }
 
-void RenderProcess::initLayout() {
+void RenderProcess::initPipelineLayout() {
   vk::PipelineLayoutCreateInfo layoutInfo;
   auto range = Shader::GetInstance().GetPushConstantRange();
   //     createInfo.setSetLayouts(Context::Instance().shader->GetDescriptorSetLayouts())
   //               .setPushConstantRanges(range);
-  layoutInfo.setSetLayouts(Shader::GetInstance().setLayouts)
+  layoutInfo.setSetLayouts(Shader::GetInstance().descriptorSetLayout)
       .setPushConstantRanges(range);
-  layout = Context::GetInstance().device.createPipelineLayout(layoutInfo);
+  pipelineLayout =
+      Context::GetInstance().device.createPipelineLayout(layoutInfo);
 }
 
 void RenderProcess::initRenderPass() {

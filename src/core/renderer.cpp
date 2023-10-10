@@ -169,16 +169,16 @@ void Renderer::DrawTexture(const Rect& rect, Texture& texture) {
   cmdBuff.bindPipeline(vk::PipelineBindPoint::eGraphics,
                        renderProcess->graphicsPipelineWithTriangleTopology);
   cmdBuff.bindDescriptorSets(
-      vk::PipelineBindPoint::eGraphics, renderProcess->layout, 0,
+      vk::PipelineBindPoint::eGraphics, renderProcess->pipelineLayout, 0,
       {descriptorSets_[curFrame_].set, texture.set.set}, {});
   cmdBuff.bindVertexBuffers(0, deviceRectVertexBuffer_->buffer, offset);
   cmdBuff.bindIndexBuffer(deviceRectIndicesBuffer_->buffer, 0,
                           vk::IndexType::eUint32);
   auto model =
       Mat4::CreateTranslate(rect.position).Mul(Mat4::CreateScale(rect.size));
-  cmdBuff.pushConstants(renderProcess->layout, vk::ShaderStageFlagBits::eVertex,
+  cmdBuff.pushConstants(renderProcess->pipelineLayout, vk::ShaderStageFlagBits::eVertex,
                         0, sizeof(Mat4), model.GetData());
-  cmdBuff.pushConstants(renderProcess->layout,
+  cmdBuff.pushConstants(renderProcess->pipelineLayout,
                         vk::ShaderStageFlagBits::eFragment, sizeof(Mat4),
                         sizeof(Color), &drawColor_);
   cmdBuff.drawIndexed(6, 1, 0, 0, 0);
@@ -196,7 +196,7 @@ void Renderer::DrawLine(const Vec& p1, const Vec& p2) {
                    ctx.renderProcess->graphicsPipelineWithLineTopology);
   cmd.bindVertexBuffers(0, deviceLineVertexBuffer_->buffer, offset);
 
-  auto& layout = Context::GetInstance().renderProcess->layout;
+  auto& layout = Context::GetInstance().renderProcess->pipelineLayout;
   cmd.bindDescriptorSets(
       vk::PipelineBindPoint::eGraphics, layout, 0,
       {descriptorSets_[curFrame_].set, whiteTexture->set.set}, {});

@@ -3,16 +3,6 @@
 #include "core/context.hpp"
 
 namespace sktr {
-std::unique_ptr<Shader> Shader::instance_ = nullptr;
-
-void Shader::Init(const std::string &verteSource,
-                  const std::string &fragSource) {
-  instance_.reset(new Shader{verteSource, fragSource});
-}
-
-void Shader::Quit() { instance_.reset(); }
-
-Shader &Shader::GetInstance() { return *instance_; }
 
 Shader::Shader(const std::string &vertexSource, const std::string &fragSource) {
   vk::ShaderModuleCreateInfo shaderModuleInfo;
@@ -34,10 +24,7 @@ Shader::Shader(const std::string &vertexSource, const std::string &fragSource) {
 
 Shader::~Shader() {
   auto &device = Context::GetInstance().device;
-  for (auto &layout : setLayouts) {
-    device.destroyDescriptorSetLayout(layout);
-  }
-  setLayouts.clear();
+  device.destroyDescriptorSetLayout(descriptorSetLayout);
   device.destroyShaderModule(vertexModule);
   device.destroyShaderModule(fragmentModule);
 }
@@ -63,28 +50,27 @@ void Shader::initStage() {
 
 void Shader::initDescriptorSetLayouts() {
   auto &device = Context::GetInstance().device;
-  // createSetLayout, 对应.frag中layout的set，binding对应bingding
-  vk::DescriptorSetLayoutCreateInfo setLayoutInfo;
   // mvp and color
-  std::vector<vk::DescriptorSetLayoutBinding> bindings(1);
-  bindings[0]
-      .setBinding(0)
+  vk::DescriptorSetLayoutBinding uboLayoutBinding;
+  uboLayoutBinding.setBinding(0)
       .setDescriptorCount(1)
       .setDescriptorType(vk::DescriptorType::eUniformBuffer)
       .setStageFlags(vk::ShaderStageFlagBits::eVertex);
-  setLayoutInfo.setBindings(bindings);
-  setLayouts.push_back(device.createDescriptorSetLayout(setLayoutInfo));
 
   // sampler
-  bindings.resize(1);
-  bindings[0]
-      .setBinding(0)
+  vk::DescriptorSetLayoutBinding samplerLayoutBinding;
+  samplerLayoutBinding.setBinding(1)
       .setDescriptorCount(1)
       .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
       .setStageFlags(vk::ShaderStageFlagBits::eFragment);
-  setLayoutInfo.setBindings(bindings);
 
-  setLayouts.push_back(device.createDescriptorSetLayout(setLayoutInfo));
+  std::array<vk::DescriptorSetLayoutBinding, 2> bindings = {
+      uboLayoutBinding, samplerLayoutBinding};
+
+  // createSetLayout, 对应.frag中layout的set，binding对应binding
+  vk::DescriptorSetLayoutCreateInfo setLayoutInfo;
+  setLayoutInfo.setBindings(bindings);
+  descriptorSetLayout = device.createDescriptorSetLayout(setLayoutInfo);
 }
 
 std::vector<vk::PushConstantRange> Shader::GetPushConstantRange() const {

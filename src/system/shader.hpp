@@ -1,20 +1,25 @@
 #pragma once
 
 #include "pch.hpp"
+#include "utils/singlton.hpp"
 
 namespace sktr {
 
-class Shader final {
+class Shader final : public Singlton<Shader> {
+ public:
+  vk::ShaderModule vertexModule;
+  vk::ShaderModule fragmentModule;
+  vk::DescriptorSetLayout descriptorSetLayout;
+
+  ~Shader();
+
+  std::vector<vk::PipelineShaderStageCreateInfo> GetStages();
+
+  std::vector<vk::PushConstantRange> GetPushConstantRange() const;
+
  private:
-  static std::unique_ptr<Shader> instance_;
   std::vector<vk::PipelineShaderStageCreateInfo> stages_;
 
-  Shader(const std::string &verteSource, const std::string &fragSource);
-  void initStage();
-
-  void initDescriptorSetLayouts();
-
- public:
   /**
    * @brief
    * @note
@@ -22,19 +27,9 @@ class Shader final {
    * @param  &fragSource:片段着色器的源代码
    * @retval None
    */
-  static void Init(const std::string &vertexSource,
-                   const std::string &fragSource);
-  static void Quit();
-  static Shader &GetInstance();
+  Shader(const std::string &verteSource, const std::string &fragSource);
+  void initStage();
 
-  vk::ShaderModule vertexModule;
-  vk::ShaderModule fragmentModule;
-  std::vector<vk::DescriptorSetLayout> setLayouts;
-
-  ~Shader();
-
-  std::vector<vk::PipelineShaderStageCreateInfo> GetStages();
-
-  std::vector<vk::PushConstantRange> GetPushConstantRange() const;
+  void initDescriptorSetLayouts();
 };
 }  // namespace sktr

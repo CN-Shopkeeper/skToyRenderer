@@ -9,7 +9,7 @@ class RenderProcess final {
   vk::Pipeline graphicsPipelineWithLineTopology;
 
   // 传递数据（例如Uniform）在shader中的布局
-  vk::PipelineLayout layout;
+  vk::PipelineLayout pipelineLayout;
   vk::RenderPass renderPass;
 
   RenderProcess(int w, int h);
@@ -22,7 +22,7 @@ class RenderProcess final {
   void initPipeline(int width, int height);
   vk::Pipeline createPipeline(int width, int height,
                               vk::PrimitiveTopology topology);
-  void initLayout();
+  void initPipelineLayout();
   void initRenderPass();
   vk::Format findSupportedFormat(const std::vector<vk::Format>&,
                                  vk::ImageTiling, vk::FormatFeatureFlags);

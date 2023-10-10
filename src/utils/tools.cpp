@@ -17,6 +17,7 @@ std::string ReadWholeFile(const std::string& filename) {
   file.seekg(0);
 
   file.read(content.data(), content.size());
+  file.close();
 
   return content;
 }
