@@ -14,7 +14,7 @@ RenderProcess::RenderProcess(int w, int h) {
 }
 
 RenderProcess::~RenderProcess() {
-  auto &device = Context::GetInstance().device;
+  auto& device = Context::GetInstance().device;
   device.destroyPipelineCache(pipelineCache_);
   device.destroyRenderPass(renderPass);
   device.destroyPipelineLayout(layout);
@@ -28,8 +28,8 @@ vk::Pipeline RenderProcess::createPipeline(int width, int height,
 
   // 1. vertex input
   vk::PipelineVertexInputStateCreateInfo pipelineVertexInputeStateInfo;
-  auto attribute = Vec::GetAttributeDescriptions();
-  auto binding = Vec::GetBindingDescriptions();
+  auto attribute = Vertex::GetAttributeDescriptions();
+  auto binding = Vertex::GetBindingDescriptions();
   pipelineVertexInputeStateInfo.setVertexBindingDescriptions(binding)
       .setVertexAttributeDescriptions(attribute);
   graphicsPipelineInfo.setPVertexInputState(&pipelineVertexInputeStateInfo);
@@ -155,15 +155,18 @@ void RenderProcess::initLayout() {
 }
 
 void RenderProcess::initRenderPass() {
-  vk::RenderPassCreateInfo renderPassInfo;
+  auto& ctx = Context::GetInstance();
+
   // 纹理附件的描述
-  vk::AttachmentDescription attachmentDesc;
-  attachmentDesc
-      .setFormat(Context::GetInstance().swapchain->info.format.format)
+
+  //   MSAA
+  vk::AttachmentDescription colorAttachment;
+  colorAttachment
+      .setFormat(ctx.swapchain->info.format.format)
       // 初始渲染布局
       .setInitialLayout(vk::ImageLayout::eUndefined)
       // 出去的布局
-      .setFinalLayout(vk::ImageLayout::ePresentSrcKHR)
+      .setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal)
       // 加载时进行的操作
       .setLoadOp(vk::AttachmentLoadOp::eClear)
       // 绘制完成后如何存储
@@ -171,20 +174,57 @@ void RenderProcess::initRenderPass() {
       // 模板缓冲
       .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
       .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-      .setSamples(vk::SampleCountFlagBits::e1);
-  renderPassInfo.setAttachments(attachmentDesc);
+      .setSamples(ctx.sampler.msaaSamples);
 
-  vk::SubpassDescription subpass;
-  vk::AttachmentReference reference;
-  reference
-      .setLayout(vk::ImageLayout::eColorAttachmentOptimal)
-      // 纹理下标
-      .setAttachment(0);
+  vk::AttachmentReference colorAttachmentRef{};
+  //   下标
+  colorAttachmentRef.setAttachment(0);
+  colorAttachmentRef.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
+
+  // image to present
+  vk::AttachmentDescription colorAttachmentResolve{};
+  colorAttachmentResolve.setFormat(ctx.swapchain->info.format.format)
+      .setSamples(vk::SampleCountFlagBits::e1)
+      .setLoadOp(vk::AttachmentLoadOp::eDontCare)
+      .setStoreOp(vk::AttachmentStoreOp::eStore)
+      .setInitialLayout(vk::ImageLayout::eUndefined)
+      .setFinalLayout(vk::ImageLayout::ePresentSrcKHR)
+      .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+      .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+
+  vk::AttachmentReference colorAttachmentResolveRef{};
+  colorAttachmentRef.setAttachment(2);
+  colorAttachmentRef.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
+
+  // depth
+  vk::AttachmentDescription depthAttachment{};
+  depthAttachment.setFormat(findDepthFormat())
+      .setSamples(ctx.sampler.msaaSamples)
+      .setLoadOp(vk::AttachmentLoadOp::eDontCare)
+      .setStoreOp(vk::AttachmentStoreOp::eDontCare)
+      .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+      .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+      .setInitialLayout(vk::ImageLayout::eUndefined)
+      .setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+  vk::AttachmentReference depthAttachmentRef{};
+  depthAttachmentRef.setAttachment(1);
+  depthAttachmentRef.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+  vk::SubpassDescription subpass{};
   subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
-      .setColorAttachments(reference);
+      .setColorAttachments(colorAttachmentRef)
+      .setPDepthStencilAttachment(&depthAttachmentRef)
+      .setResolveAttachments(colorAttachmentResolveRef);
+
+  std::array<vk::AttachmentDescription, 3> attachments = {
+      colorAttachment, depthAttachment, colorAttachmentResolve};
+
+  vk::RenderPassCreateInfo renderPassInfo;
   renderPassInfo
       // 一个渲染流程可以分为多个子流程
-      .setSubpasses(subpass);
+      .setSubpasses(subpass)
+      .setAttachments(attachments);
 
   // 当有多个subpass的时候，先后执行顺序
   vk::SubpassDependency dependency;
@@ -194,13 +234,41 @@ void RenderProcess::initRenderPass() {
       // 也是dst是结果subpass，也就是我们设置的。下标
       .setDstSubpass(0)
       // 设置dst的访问权限
-      .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite)
+      .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite |
+                        vk::AccessFlagBits::eDepthStencilAttachmentWrite)
       // 渲染过程完成后用于什么场景
-      .setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-      .setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+      .setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput |
+                       vk::PipelineStageFlagBits::eEarlyFragmentTests)
+      .setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput |
+                       vk::PipelineStageFlagBits::eEarlyFragmentTests);
   renderPassInfo.setDependencies(dependency);
 
   renderPass = Context::GetInstance().device.createRenderPass(renderPassInfo);
+}
+
+vk::Format RenderProcess::findSupportedFormat(
+    const std::vector<vk::Format>& candidates, vk::ImageTiling tiling,
+    vk::FormatFeatureFlags features) {
+  for (vk::Format format : candidates) {
+    vk::FormatProperties props =
+        Context::GetInstance().phyDevice.getFormatProperties(format);
+    if (tiling == vk::ImageTiling::eLinear &&
+        (props.linearTilingFeatures & features) == features) {
+      return format;
+    } else if (tiling == vk::ImageTiling::eOptimal &&
+               (props.optimalTilingFeatures & features) == features) {
+      return format;
+    }
+  }
+  throw std::runtime_error("failed to find supported format!");
+}
+
+vk::Format RenderProcess::findDepthFormat() {
+  return findSupportedFormat(
+      {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint,
+       vk::Format::eD24UnormS8Uint},
+      vk::ImageTiling::eOptimal,
+      vk::FormatFeatureFlagBits::eDepthStencilAttachment);
 }
 
 vk::PipelineCache RenderProcess::createPipelineCache() {

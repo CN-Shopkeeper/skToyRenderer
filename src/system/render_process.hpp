@@ -24,6 +24,9 @@ class RenderProcess final {
                               vk::PrimitiveTopology topology);
   void initLayout();
   void initRenderPass();
+  vk::Format findSupportedFormat(const std::vector<vk::Format>&,
+                                 vk::ImageTiling, vk::FormatFeatureFlags);
+  vk::Format findDepthFormat();
 };
 
 }  // namespace sktr
