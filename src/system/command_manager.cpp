@@ -20,7 +20,8 @@ vk::CommandPool CommandManager::createCommandPool() {
   commandPoolInfo
       // eTransient：瞬间的，可以在一帧内反复使用的
       // eResetCommandBuffer：可以单独reset
-      .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
+      .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
+      .setQueueFamilyIndex(ctx.queueFamilyIndices.graphicsQueue.value());
   return ctx.device.createCommandPool(commandPoolInfo);
 }
 

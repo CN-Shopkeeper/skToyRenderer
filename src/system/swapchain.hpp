@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "core/texture.hpp"
 #include "pch.hpp"
 
 namespace sktr {
@@ -30,7 +31,7 @@ class Swapchain final {
     // 图像的数量
     uint32_t imageCount;
     // 图像的颜色属性
-    vk::SurfaceFormatKHR format;
+    vk::SurfaceFormatKHR surfaceFormat;
     // SRT
     vk::SurfaceTransformFlagBitsKHR transform;
     // 处理顺序。
@@ -44,6 +45,8 @@ class Swapchain final {
   SwapchainInfo info;
   std::vector<vk::Image> images;
   std::vector<vk::ImageView> imageViews;
+  ImageResource colorResource;
+  ImageResource depthResource;
   std::vector<vk::Framebuffer> framebuffers;
 
   void CreateFramebuffers(int w, int h);
@@ -53,6 +56,7 @@ class Swapchain final {
 
   // imageView是对image的视图，读取时不会直接对image进行操作。可以修改读取image的方式
   void createImageViews();
+  void createImageResource(int w, int h);
 
   vk::SurfaceFormatKHR chooseSwapSurfaceFormat(
       const std::vector<vk::SurfaceFormatKHR>& availableFormats);

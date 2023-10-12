@@ -37,4 +37,8 @@ std::string ReadWholeFile(const std::string& filename);
  * @retval
  * */
 uint32_t QueryMemoryTypeIndex(uint32_t bits, vk::MemoryPropertyFlags flags);
+
+vk::Format findSupportedFormat(const std::vector<vk::Format>&, vk::ImageTiling,
+                               vk::FormatFeatureFlags);
+vk::Format findDepthFormat();
 }  // namespace sktr

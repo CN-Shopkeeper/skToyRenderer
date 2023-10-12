@@ -180,7 +180,7 @@ void RenderProcess::initRenderPass() {
   //   MSAA
   vk::AttachmentDescription colorAttachment;
   colorAttachment
-      .setFormat(ctx.swapchain->info.format.format)
+      .setFormat(ctx.swapchain->info.surfaceFormat.format)
       // 初始渲染布局
       .setInitialLayout(vk::ImageLayout::eUndefined)
       // 出去的布局
@@ -201,7 +201,7 @@ void RenderProcess::initRenderPass() {
 
   // image to present
   vk::AttachmentDescription colorAttachmentResolve{};
-  colorAttachmentResolve.setFormat(ctx.swapchain->info.format.format)
+  colorAttachmentResolve.setFormat(ctx.swapchain->info.surfaceFormat.format)
       .setSamples(vk::SampleCountFlagBits::e1)
       .setLoadOp(vk::AttachmentLoadOp::eDontCare)
       .setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -262,31 +262,6 @@ void RenderProcess::initRenderPass() {
   renderPassInfo.setDependencies(dependency);
 
   renderPass = Context::GetInstance().device.createRenderPass(renderPassInfo);
-}
-
-vk::Format RenderProcess::findSupportedFormat(
-    const std::vector<vk::Format>& candidates, vk::ImageTiling tiling,
-    vk::FormatFeatureFlags features) {
-  for (vk::Format format : candidates) {
-    vk::FormatProperties props =
-        Context::GetInstance().phyDevice.getFormatProperties(format);
-    if (tiling == vk::ImageTiling::eLinear &&
-        (props.linearTilingFeatures & features) == features) {
-      return format;
-    } else if (tiling == vk::ImageTiling::eOptimal &&
-               (props.optimalTilingFeatures & features) == features) {
-      return format;
-    }
-  }
-  throw std::runtime_error("failed to find supported format!");
-}
-
-vk::Format RenderProcess::findDepthFormat() {
-  return findSupportedFormat(
-      {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint,
-       vk::Format::eD24UnormS8Uint},
-      vk::ImageTiling::eOptimal,
-      vk::FormatFeatureFlagBits::eDepthStencilAttachment);
 }
 
 vk::PipelineCache RenderProcess::createPipelineCache() {

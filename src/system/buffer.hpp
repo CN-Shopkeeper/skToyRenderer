@@ -5,6 +5,16 @@
 
 namespace sktr {
 class Buffer final {
+ public:
+  vk::Buffer buffer;
+  vk::DeviceMemory memory;
+  void* map;
+  size_t size;
+
+  Buffer(size_t size, vk::BufferUsageFlags usage,
+         vk::MemoryPropertyFlags propertyFlags);
+  ~Buffer();
+
  private:
   struct MemoryInfo final {
     size_t size;
@@ -15,15 +25,5 @@ class Buffer final {
   void bindingMem2Buf();
 
   MemoryInfo queryBufferMemoryInfo(vk::MemoryPropertyFlags);
-
- public:
-  vk::Buffer buffer;
-  vk::DeviceMemory memory;
-  void* map;
-  size_t size;
-
-  Buffer(size_t size, vk::BufferUsageFlags usage,
-         vk::MemoryPropertyFlags propertyFlags);
-  ~Buffer();
 };
 }  // namespace sktr

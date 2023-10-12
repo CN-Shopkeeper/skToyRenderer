@@ -16,8 +16,8 @@ Swapchain::Swapchain(int w, int h) {
       // 颜色绘制到屏幕上时不融混
       .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
       .setSurface(Context::GetInstance().surface)
-      .setImageColorSpace(info.format.colorSpace)
-      .setImageFormat(info.format.format)
+      .setImageColorSpace(info.surfaceFormat.colorSpace)
+      .setImageFormat(info.surfaceFormat.format)
       .setImageExtent(info.imageExtent)
       .setMinImageCount(info.imageCount)
       .setPresentMode(info.present)
@@ -41,6 +41,8 @@ Swapchain::Swapchain(int w, int h) {
   images = Context::GetInstance().device.getSwapchainImagesKHR(swapchain);
 
   createImageViews();
+
+  createImageResource(w, h);
 }
 
 Swapchain::~Swapchain() {
@@ -61,7 +63,7 @@ void Swapchain::queryInfo(int w, int h) {
 
   // 支持的surface格式
   SwapChainSupportDetails details = ctx.QuerySwapChainSupport(phyDevice);
-  info.format = chooseSwapSurfaceFormat(details.formats);
+  info.surfaceFormat = chooseSwapSurfaceFormat(details.formats);
 
   // 多缓冲，多少张图像可以在swapchain中渲染
   info.imageCount = std::clamp<unsigned int>(
@@ -95,19 +97,34 @@ void Swapchain::createImageViews() {
         .setComponents(mapping)
         // 通过何种方式观察图像
         .setViewType(vk::ImageViewType::e2D)
-        .setFormat(info.format.format)
+        .setFormat(info.surfaceFormat.format)
         .setSubresourceRange(range);
     imageViews[i] =
         Context::GetInstance().device.createImageView(imageViewInfo);
   }
 }
 
+void Swapchain::createImageResource(int w, int h) {
+  auto& msaa = Context::GetInstance().sampler.msaaSamples;
+  colorResource = ImageResource::CreateColorResource(
+      w, h, 1, msaa, info.surfaceFormat.format, vk::ImageTiling::eOptimal,
+      vk::ImageUsageFlagBits::eTransientAttachment |
+          vk::ImageUsageFlagBits::eColorAttachment,
+      vk::MemoryPropertyFlagBits::eDeviceLocal);
+  depthResource = ImageResource::CreateDepthResource(
+      w, h, 1, msaa, findDepthFormat(), vk::ImageTiling::eOptimal,
+      vk::ImageUsageFlagBits::eDepthStencilAttachment,
+      vk::MemoryPropertyFlagBits::eDeviceLocal);
+}
+
 void Swapchain::CreateFramebuffers(int w, int h) {
   framebuffers.resize(images.size());
   for (int i = 0; i < framebuffers.size(); i++) {
     auto& framebuffer = framebuffers[i];
+    std::array<vk::ImageView, 3> attachments = {
+        colorResource.view, depthResource.view, imageViews[i]};
     vk::FramebufferCreateInfo framebufferInfo;
-    framebufferInfo.setAttachments(imageViews[i])
+    framebufferInfo.setAttachments(attachments)
         .setWidth(w)
         .setHeight(h)
         .setRenderPass(Context::GetInstance().renderProcess->renderPass)
