@@ -16,13 +16,14 @@ class Renderer final {
   void SetDrawColor(const Color& color);
 
   // 开启render pass 并绑定渲染管线
-  void StartRender();
+  bool StartRender();
   // 结束render pass 并提交命令
   void EndRender();
 
   // 可以绘制多个图片
   void DrawTexture(const Rect& rect, Texture& texture);
   void DrawLine(const Vec2& p1, const Vec2& p2);
+  void DrawModel(const Model& model);
 
   void GetInstance();
 
@@ -61,7 +62,7 @@ class Renderer final {
   void createBuffers();
   void createUniformBuffers();
 
-  void bufferMVPData();
+  void bufferWorldData();
 
   void initMats();
 

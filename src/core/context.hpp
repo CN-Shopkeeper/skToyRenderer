@@ -26,6 +26,8 @@ class Context final : public Singlton<Context> {
   std::unique_ptr<CommandManager> commandManager;
   QueueFamilyIndices queueFamilyIndices;
   Sampler sampler;
+  bool windowMinimized = false;
+  bool frameBufferResized = false;
 
   ~Context();
 

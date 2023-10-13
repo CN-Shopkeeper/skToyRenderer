@@ -10,7 +10,7 @@ Renderer::Renderer(int width, int height, int maxFlightCount)
   createSemaphores();
   createFences();
 
-  createBuffers();
+  createUniformBuffers();
 
   initMats();
   SetProjection(glm::radians(45.0f), width / (float)height, 0.1f, 10.0f);
@@ -51,19 +51,10 @@ void Renderer::allocCmdBuffers() {
   }
 }
 
-void Renderer::StartRender() {
+bool Renderer::StartRender() {
   auto& device = Context::GetInstance().device;
   auto& renderProcess = Context::GetInstance().renderProcess;
   auto& swapchain = Context::GetInstance().swapchain;
-
-  auto& fence = fences_[curFrame_];
-
-  if (device.waitForFences(fence, true,
-                           std::numeric_limits<std::uint64_t>::max()) !=
-      vk::Result::eSuccess) {
-    throw std::runtime_error("wait for fence failed");
-  }
-  device.resetFences(fence);
 
   /*
    * Semaphore - GPU internal; Queue - Queue
@@ -72,15 +63,26 @@ void Renderer::StartRender() {
 
   auto& imageAvaliableSem = imageAvaliableSems_[curFrame_];
   auto& renderFinishSem = renderFinishSems_[curFrame_];
+  auto& fence = fences_[curFrame_];
 
+  if (device.waitForFences(fence, true,
+                           std::numeric_limits<std::uint64_t>::max()) !=
+      vk::Result::eSuccess) {
+    throw std::runtime_error("wait for fence failed");
+  }
   auto result = device.acquireNextImageKHR(swapchain->swapchain,
                                            std::numeric_limits<uint64_t>::max(),
                                            imageAvaliableSem);
-  if (result.result != vk::Result::eSuccess) {
+  if (result.result == vk::Result::eErrorOutOfDateKHR) {
+    swapchain->Recreate();
+    return false;
+  } else if (result.result != vk::Result::eSuccess &&
+             result.result != vk::Result::eSuboptimalKHR) {
     std::cout << "acquire next image fialed" << std::endl;
   }
 
   imageIndex_ = result.value;
+  device.resetFences(fence);
 
   auto& cmdBuff = cmdBuffs_[curFrame_];
   cmdBuff.reset();
@@ -137,6 +139,34 @@ void Renderer::EndRender() {
   }
 
   curFrame_ = (curFrame_ + 1) % maxFlightCount_;
+}
+
+void Renderer::DrawModel(const Model& model) {
+  auto& ctx = Context::GetInstance();
+  auto& device = ctx.device;
+  auto& cmdBuff = cmdBuffs_[curFrame_];
+  auto& renderProcess = Context::GetInstance().renderProcess;
+  vk::DeviceSize offset = 0;
+
+  cmdBuff.bindPipeline(vk::PipelineBindPoint::eGraphics,
+                       renderProcess->graphicsPipelineWithTriangleTopology);
+  cmdBuff.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                             renderProcess->pipelineLayout, 0,
+                             worldUniformDescriptorSets_[curFrame_].set, {});
+  cmdBuff.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                             renderProcess->pipelineLayout, 1,
+                             model.texture.set.set, {});
+  cmdBuff.bindVertexBuffers(0, model.vertexBuffer->buffer, offset);
+  cmdBuff.bindIndexBuffer(model.indicesBuffer->buffer, 0,
+                          vk::IndexType::eUint32);
+
+  cmdBuff.pushConstants(renderProcess->pipelineLayout,
+                        vk::ShaderStageFlagBits::eVertex, 0, sizeof(glm::mat4),
+                        &model.modelMatrix);
+  cmdBuff.pushConstants(renderProcess->pipelineLayout,
+                        vk::ShaderStageFlagBits::eFragment, sizeof(glm::mat4),
+                        sizeof(Color), &drawColor_);
+  cmdBuff.drawIndexed(model.indices.size(), 1, 0, 0, 0);
 }
 
 // void Renderer::DrawTexture(const Rect& rect, Texture& texture) {
@@ -228,9 +258,11 @@ void Renderer::createUniformBuffers() {
   }
 }
 
-void Renderer::bufferMVPData() {
-  memcpy(uniformWorldBuffers[curFrame_]->map, &worldMatrices_,
-         sizeof(worldMatrices_));
+void Renderer::bufferWorldData() {
+  for (int i = 0; i < uniformWorldBuffers.size(); i++) {
+    memcpy(uniformWorldBuffers[i]->map, &worldMatrices_,
+           sizeof(worldMatrices_));
+  }
 }
 
 void Renderer::SetDrawColor(const Color& color) { drawColor_ = color; }
@@ -248,7 +280,8 @@ void Renderer::initMats() {
 
 void Renderer::SetProjection(float fov, float aspect, float near, float far) {
   worldMatrices_.proj = glm::perspective(fov, aspect, near, far);
-  bufferMVPData();
+  worldMatrices_.proj *= -1;
+  bufferWorldData();
 }
 
 void Renderer::copyBuffer(vk::Buffer& src, vk::Buffer& dst, size_t size,

@@ -45,15 +45,20 @@ class Swapchain final {
   SwapchainInfo info;
   std::vector<vk::Image> images;
   std::vector<vk::ImageView> imageViews;
-  ImageResource colorResource;
-  ImageResource depthResource;
+  std::unique_ptr<ImageResource> colorResource;
+  std::unique_ptr<ImageResource> depthResource;
   std::vector<vk::Framebuffer> framebuffers;
 
   void CreateFramebuffers(int w, int h);
 
+  void Cleanup();
+  void Recreate();
+
  private:
+  int width, height;
   void queryInfo(int w, int h);
 
+  void createSwapchain();
   // imageView是对image的视图，读取时不会直接对image进行操作。可以修改读取image的方式
   void createImageViews();
   void createImageResource(int w, int h);

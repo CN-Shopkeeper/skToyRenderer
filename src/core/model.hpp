@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.hpp"
 #include "system/buffer.hpp"
+#include "texture.hpp"
 #include "utils/common.hpp"
 
 namespace sktr {
@@ -11,6 +12,7 @@ class Model final {
   std::vector<Vertex> vertices;
   std::vector<uint32_t> indices;
   glm ::mat4 modelMatrix;
+  Texture texture;
 
   std::unique_ptr<Buffer> vertexBuffer;
   std::unique_ptr<Buffer> indicesBuffer;

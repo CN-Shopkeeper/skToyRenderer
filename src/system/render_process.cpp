@@ -166,7 +166,7 @@ void RenderProcess::initPipelineLayout() {
   auto range = Shader::GetInstance().GetPushConstantRange();
   //     createInfo.setSetLayouts(Context::Instance().shader->GetDescriptorSetLayouts())
   //               .setPushConstantRanges(range);
-  layoutInfo.setSetLayouts(Shader::GetInstance().descriptorSetLayout)
+  layoutInfo.setSetLayouts(Shader::GetInstance().descriptorSetLayouts)
       .setPushConstantRanges(range);
   pipelineLayout =
       Context::GetInstance().device.createPipelineLayout(layoutInfo);

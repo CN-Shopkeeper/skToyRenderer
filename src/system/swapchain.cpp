@@ -4,8 +4,10 @@
 
 namespace sktr {
 
-Swapchain::Swapchain(int w, int h) {
-  queryInfo(w, h);
+Swapchain::Swapchain(int w, int h) : width(w), height(h) { createSwapchain(); }
+
+void Swapchain::createSwapchain() {
+  queryInfo(width, height);
   auto swapchainInfo = vk::SwapchainCreateInfoKHR{};
   swapchainInfo
       .setClipped(true)
@@ -42,10 +44,33 @@ Swapchain::Swapchain(int w, int h) {
 
   createImageViews();
 
-  createImageResource(w, h);
+  createImageResource(width, height);
+
+  CreateFramebuffers(width, height);
 }
 
-Swapchain::~Swapchain() {
+void Swapchain::Recreate() {
+  auto& ctx = Context::GetInstance();
+  SDL_Event event;
+  while (ctx.windowMinimized) {
+    SDL_WaitEvent(&event);
+    if (event.type == SDL_WINDOWEVENT &&
+        event.window.event == SDL_WINDOWEVENT_RESTORED) {
+      std::cout << "restored" << std::endl;
+      ctx.frameBufferResized = true;
+      ctx.windowMinimized = false;
+    }
+  }
+  ctx.device.waitIdle();
+
+  Cleanup();
+}
+
+Swapchain::~Swapchain() { Cleanup(); }
+
+void Swapchain::Cleanup() {
+  depthResource.reset();
+  colorResource.reset();
   for (auto& framebuffer : framebuffers) {
     Context::GetInstance().device.destroyFramebuffer(framebuffer);
   }
@@ -106,15 +131,15 @@ void Swapchain::createImageViews() {
 
 void Swapchain::createImageResource(int w, int h) {
   auto& msaa = Context::GetInstance().sampler.msaaSamples;
-  colorResource = ImageResource::CreateColorResource(
+  colorResource.reset(new ImageResource(ImageResource::CreateColorResource(
       w, h, 1, msaa, info.surfaceFormat.format, vk::ImageTiling::eOptimal,
       vk::ImageUsageFlagBits::eTransientAttachment |
           vk::ImageUsageFlagBits::eColorAttachment,
-      vk::MemoryPropertyFlagBits::eDeviceLocal);
-  depthResource = ImageResource::CreateDepthResource(
+      vk::MemoryPropertyFlagBits::eDeviceLocal)));
+  depthResource.reset(new ImageResource(ImageResource::CreateDepthResource(
       w, h, 1, msaa, findDepthFormat(), vk::ImageTiling::eOptimal,
       vk::ImageUsageFlagBits::eDepthStencilAttachment,
-      vk::MemoryPropertyFlagBits::eDeviceLocal);
+      vk::MemoryPropertyFlagBits::eDeviceLocal)));
 }
 
 void Swapchain::CreateFramebuffers(int w, int h) {
@@ -122,7 +147,7 @@ void Swapchain::CreateFramebuffers(int w, int h) {
   for (int i = 0; i < framebuffers.size(); i++) {
     auto& framebuffer = framebuffers[i];
     std::array<vk::ImageView, 3> attachments = {
-        colorResource.view, depthResource.view, imageViews[i]};
+        colorResource->view, depthResource->view, imageViews[i]};
     vk::FramebufferCreateInfo framebufferInfo;
     framebufferInfo.setAttachments(attachments)
         .setWidth(w)
