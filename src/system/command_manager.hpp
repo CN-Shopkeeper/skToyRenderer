@@ -4,11 +4,6 @@
 
 namespace sktr {
 class CommandManager final {
- private:
-  vk::CommandPool pool_;
-
-  vk::CommandPool createCommandPool();
-
  public:
   CommandManager();
   ~CommandManager();
@@ -23,5 +18,10 @@ class CommandManager final {
 
   using RecordCmdFunc = std::function<void(vk::CommandBuffer&)>;
   void ExecuteCmd(vk::Queue, RecordCmdFunc);
+
+ private:
+  vk::CommandPool pool_;
+
+  vk::CommandPool createCommandPool();
 };
 }  // namespace sktr

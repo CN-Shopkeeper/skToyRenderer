@@ -4,15 +4,6 @@
 
 namespace sktr {
 
-const std::array<Vertex, 4> vertices = {
-    Vertex{Vec{-0.5, -0.5}, Vec{0, 0}},
-    Vertex{Vec{0.5, -0.5}, Vec{1, 0}},
-    Vertex{Vec{0.5, 0.5}, Vec{1, 1}},
-    Vertex{Vec{-0.5, 0.5}, Vec{0, 1}},
-};
-
-const std::uint32_t indices[] = {0, 1, 3, 1, 2, 3};
-
 Renderer::Renderer(int width, int height, int maxFlightCount)
     : maxFlightCount_(maxFlightCount), curFrame_(0) {
   allocCmdBuffers();
@@ -22,9 +13,9 @@ Renderer::Renderer(int width, int height, int maxFlightCount)
   createBuffers();
 
   initMats();
-  SetProjection(0, width, 0, height, 1, -1);
+  SetProjection(glm::radians(45.0f), width / (float)height, 0.1f, 10.0f);
 
-  descriptorSets_ =
+  worldUniformDescriptorSets_ =
       DescriptorSetManager::GetInstance().AllocBufferSets(maxFlightCount);
   updateDescriptorSets();
 
@@ -39,17 +30,7 @@ Renderer::~Renderer() {
   // ! 应当手动调用Texture Manager的clear，
   // ! 因为单例的析构函数在最后，会导致内部的texture析构时device以及为空
   TextureManager::GetInstance().Clear();
-  hostRectIndicesBuffer_.reset();
-  deviceRectIndicesBuffer_.reset();
-  // ? 释放line
-  hostLineVertexBuffer_.reset();
-  deviceLineVertexBuffer_.reset();
-  hostLineVertexBuffer_.reset();
-  deviceLineVertexBuffer_.reset();
-  hostUniformBuffers_.clear();
-  deviceUniformBuffers_.clear();
-  hostRectVertexBuffer_.reset();
-  deviceRectVertexBuffer_.reset();
+  uniformWorldBuffers.clear();
   for (auto& sem : imageAvaliableSems_) {
     device.destroySemaphore(sem);
   }
@@ -158,55 +139,57 @@ void Renderer::EndRender() {
   curFrame_ = (curFrame_ + 1) % maxFlightCount_;
 }
 
-void Renderer::DrawTexture(const Rect& rect, Texture& texture) {
-  auto& ctx = Context::GetInstance();
-  auto& device = ctx.device;
-  auto& cmdBuff = cmdBuffs_[curFrame_];
-  auto& renderProcess = Context::GetInstance().renderProcess;
-  vk::DeviceSize offset = 0;
-  bufferRectData();
+// void Renderer::DrawTexture(const Rect& rect, Texture& texture) {
+//   auto& ctx = Context::GetInstance();
+//   auto& device = ctx.device;
+//   auto& cmdBuff = cmdBuffs_[curFrame_];
+//   auto& renderProcess = Context::GetInstance().renderProcess;
+//   vk::DeviceSize offset = 0;
+//   bufferRectData();
 
-  cmdBuff.bindPipeline(vk::PipelineBindPoint::eGraphics,
-                       renderProcess->graphicsPipelineWithTriangleTopology);
-  cmdBuff.bindDescriptorSets(
-      vk::PipelineBindPoint::eGraphics, renderProcess->pipelineLayout, 0,
-      {descriptorSets_[curFrame_].set, texture.set.set}, {});
-  cmdBuff.bindVertexBuffers(0, deviceRectVertexBuffer_->buffer, offset);
-  cmdBuff.bindIndexBuffer(deviceRectIndicesBuffer_->buffer, 0,
-                          vk::IndexType::eUint32);
-  auto model =
-      Mat4::CreateTranslate(rect.position).Mul(Mat4::CreateScale(rect.size));
-  cmdBuff.pushConstants(renderProcess->pipelineLayout, vk::ShaderStageFlagBits::eVertex,
-                        0, sizeof(Mat4), model.GetData());
-  cmdBuff.pushConstants(renderProcess->pipelineLayout,
-                        vk::ShaderStageFlagBits::eFragment, sizeof(Mat4),
-                        sizeof(Color), &drawColor_);
-  cmdBuff.drawIndexed(6, 1, 0, 0, 0);
-}
+//   cmdBuff.bindPipeline(vk::PipelineBindPoint::eGraphics,
+//                        renderProcess->graphicsPipelineWithTriangleTopology);
+//   cmdBuff.bindDescriptorSets(
+//       vk::PipelineBindPoint::eGraphics, renderProcess->pipelineLayout, 0,
+//       {descriptorSets_[curFrame_].set, texture.set.set}, {});
+//   cmdBuff.bindVertexBuffers(0, deviceRectVertexBuffer_->buffer, offset);
+//   cmdBuff.bindIndexBuffer(deviceRectIndicesBuffer_->buffer, 0,
+//                           vk::IndexType::eUint32);
+//   auto model =
+//       Mat4::CreateTranslate(rect.position).Mul(Mat4::CreateScale(rect.size));
+//   cmdBuff.pushConstants(renderProcess->pipelineLayout,
+//                         vk::ShaderStageFlagBits::eVertex, 0, sizeof(Mat4),
+//                         model.GetData());
+//   cmdBuff.pushConstants(renderProcess->pipelineLayout,
+//                         vk::ShaderStageFlagBits::eFragment, sizeof(Mat4),
+//                         sizeof(Color), &drawColor_);
+//   cmdBuff.drawIndexed(6, 1, 0, 0, 0);
+// }
 
-void Renderer::DrawLine(const Vec& p1, const Vec& p2) {
-  auto& ctx = Context::GetInstance();
-  auto& device = ctx.device;
-  auto& cmd = cmdBuffs_[curFrame_];
-  vk::DeviceSize offset = 0;
+// void Renderer::DrawLine(const Vec& p1, const Vec& p2) {
+//   auto& ctx = Context::GetInstance();
+//   auto& device = ctx.device;
+//   auto& cmd = cmdBuffs_[curFrame_];
+//   vk::DeviceSize offset = 0;
 
-  bufferLineData(p1, p2);
+//   bufferLineData(p1, p2);
 
-  cmd.bindPipeline(vk::PipelineBindPoint::eGraphics,
-                   ctx.renderProcess->graphicsPipelineWithLineTopology);
-  cmd.bindVertexBuffers(0, deviceLineVertexBuffer_->buffer, offset);
+//   cmd.bindPipeline(vk::PipelineBindPoint::eGraphics,
+//                    ctx.renderProcess->graphicsPipelineWithLineTopology);
+//   cmd.bindVertexBuffers(0, deviceLineVertexBuffer_->buffer, offset);
 
-  auto& layout = Context::GetInstance().renderProcess->pipelineLayout;
-  cmd.bindDescriptorSets(
-      vk::PipelineBindPoint::eGraphics, layout, 0,
-      {descriptorSets_[curFrame_].set, whiteTexture->set.set}, {});
-  auto model = Mat4::CreateIdentity();
-  cmd.pushConstants(layout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(Mat4),
-                    model.GetData());
-  cmd.pushConstants(layout, vk::ShaderStageFlagBits::eFragment, sizeof(Mat4),
-                    sizeof(Color), &drawColor_);
-  cmd.draw(2, 1, 0, 0);
-}
+//   auto& layout = Context::GetInstance().renderProcess->pipelineLayout;
+//   cmd.bindDescriptorSets(
+//       vk::PipelineBindPoint::eGraphics, layout, 0,
+//       {descriptorSets_[curFrame_].set, whiteTexture->set.set}, {});
+//   auto model = Mat4::CreateIdentity();
+//   cmd.pushConstants(layout, vk::ShaderStageFlagBits::eVertex, 0,
+//   sizeof(Mat4),
+//                     model.GetData());
+//   cmd.pushConstants(layout, vk::ShaderStageFlagBits::eFragment, sizeof(Mat4),
+//                     sizeof(Color), &drawColor_);
+//   cmd.draw(2, 1, 0, 0);
+// }
 
 void Renderer::createSemaphores() {
   auto& device = Context::GetInstance().device;
@@ -233,123 +216,38 @@ void Renderer::createFences() {
   }
 }
 
-void Renderer::createVertexBuffer() {
-  hostRectVertexBuffer_.reset(new Buffer{
-      sizeof(vertices),
-      // 数据传输的起点
-      vk::BufferUsageFlagBits::eTransferSrc,
-      //    eHostVisible: cpu可以访问这个内存
-      //    eHostCoherent：cpu和gpu共享内存,但是对于GPU这块内存不是最优
-      vk::MemoryPropertyFlagBits::eHostVisible |
-          vk::MemoryPropertyFlagBits::eHostCoherent});
-  deviceRectVertexBuffer_.reset(
-      new Buffer{sizeof(vertices),
-                 vk::BufferUsageFlagBits::eVertexBuffer |
-                     vk::BufferUsageFlagBits::eTransferDst,
-                 //   gpu本地的内存
-                 vk::MemoryPropertyFlagBits::eDeviceLocal});
-
-  hostLineVertexBuffer_.reset(
-      new Buffer{sizeof(Vertex) * 2, vk::BufferUsageFlagBits::eTransferSrc,
-                 vk::MemoryPropertyFlagBits::eHostVisible |
-                     vk::MemoryPropertyFlagBits::eHostCoherent});
-  deviceLineVertexBuffer_.reset(
-      new Buffer{sizeof(Vertex) * 2,
-                 vk::BufferUsageFlagBits::eVertexBuffer |
-                     vk::BufferUsageFlagBits::eTransferDst,
-                 vk::MemoryPropertyFlagBits::eDeviceLocal});
-}
-
-void Renderer::createIndicesBuffer() {
-  size_t size = sizeof(indices);
-  hostRectIndicesBuffer_.reset(
-      new Buffer{size, vk::BufferUsageFlagBits::eTransferSrc,
-                 vk::MemoryPropertyFlagBits::eHostVisible |
-                     vk::MemoryPropertyFlagBits::eHostCoherent});
-  deviceRectIndicesBuffer_.reset(
-      new Buffer{size,
-                 vk::BufferUsageFlagBits::eTransferDst |
-                     vk::BufferUsageFlagBits::eIndexBuffer,
-                 vk::MemoryPropertyFlagBits::eDeviceLocal});
-}
-
 void Renderer::createUniformBuffers() {
-  hostUniformBuffers_.resize(maxFlightCount_);
-  deviceUniformBuffers_.resize(maxFlightCount_);
+  size_t size = sizeof(WorldMatrices);
+  uniformWorldBuffers.resize(maxFlightCount_);
 
-  size_t size = sizeof(matrices);
-
-  for (auto& buffer : hostUniformBuffers_) {
-    buffer.reset(new Buffer{size, vk::BufferUsageFlagBits::eTransferSrc,
-                            vk::MemoryPropertyFlagBits::eHostCoherent |
-                                vk::MemoryPropertyFlagBits::eHostVisible});
+  for (size_t i = 0; i < maxFlightCount_; i++) {
+    uniformWorldBuffers[i].reset(
+        new Buffer{size, vk::BufferUsageFlagBits::eUniformBuffer,
+                   vk::MemoryPropertyFlagBits::eHostCoherent |
+                       vk::MemoryPropertyFlagBits::eHostVisible});
   }
-
-  for (auto& buffer : deviceUniformBuffers_) {
-    buffer.reset(new Buffer{size,
-                            vk::BufferUsageFlagBits::eTransferDst |
-                                vk::BufferUsageFlagBits::eUniformBuffer,
-                            vk::MemoryPropertyFlagBits::eDeviceLocal});
-  }
-}
-
-void Renderer::bufferRectVertexData() {
-  memcpy(hostRectVertexBuffer_->map, vertices.data(), sizeof(vertices));
-
-  copyBuffer(hostRectVertexBuffer_->buffer, deviceRectVertexBuffer_->buffer,
-             hostRectVertexBuffer_->size, 0, 0);
-}
-
-void Renderer::bufferRectIndicesData() {
-  memcpy(hostRectIndicesBuffer_->map, indices, sizeof(indices));
-
-  copyBuffer(hostRectIndicesBuffer_->buffer, deviceRectIndicesBuffer_->buffer,
-             hostRectIndicesBuffer_->size, 0, 0);
-}
-
-void Renderer::bufferLineData(const Vec& p1, const Vec& p2) {
-  Vertex vertices[]{{p1, Vec{0, 0}}, {p2, Vec{0, 0}}};
-  memcpy(hostLineVertexBuffer_->map, vertices, sizeof(vertices));
-  copyBuffer(hostLineVertexBuffer_->buffer, deviceLineVertexBuffer_->buffer,
-             hostLineVertexBuffer_->size, 0, 0);
 }
 
 void Renderer::bufferMVPData() {
-  for (int i = 0; i < hostUniformBuffers_.size(); i++) {
-    auto& buffer = hostUniformBuffers_[i];
-    memcpy(buffer->map, (void*)&matrices, sizeof(matrices));
-    copyBuffer(buffer->buffer, deviceUniformBuffers_[i]->buffer, buffer->size,
-               0, 0);
-  }
+  memcpy(uniformWorldBuffers[curFrame_]->map, &worldMatrices_,
+         sizeof(worldMatrices_));
 }
 
 void Renderer::SetDrawColor(const Color& color) { drawColor_ = color; }
 
-void Renderer::createBuffers() {
-  createVertexBuffer();
-  createIndicesBuffer();
-  createUniformBuffers();
-}
-
-void Renderer::bufferRectData() {
-  bufferRectVertexData();
-  bufferRectIndicesData();
-}
-
 void Renderer::initMats() {
-  matrices.project = Mat4::CreateIdentity();
-  matrices.view = Mat4::CreateIdentity();
+  worldMatrices_.proj = glm::identity<glm::mat4>();
+  worldMatrices_.view = glm::identity<glm::mat4>();
 }
 
 // 创建一个只有一个像素的图像，用于绘制线段
-void Renderer::createWhiteTexture() {
-  unsigned char data[] = {0xFF, 0xFF, 0xFF, 0xFF};
-  whiteTexture = TextureManager::GetInstance().Create((void*)data, 1, 1);
-}
+// void Renderer::createWhiteTexture() {
+//   unsigned char data[] = {0xFF, 0xFF, 0xFF, 0xFF};
+//   whiteTexture = TextureManager::GetInstance().Create((void*)data, 1, 1);
+// }
 
-void Renderer::SetProjection(int left, int right, int bottom, int top, int near,
-                             int far) {
-  matrices.project = Mat4::CreateOrtho(left, right, bottom, top, near, far);
+void Renderer::SetProjection(float fov, float aspect, float near, float far) {
+  worldMatrices_.proj = glm::perspective(fov, aspect, near, far);
   bufferMVPData();
 }
 
@@ -365,14 +263,14 @@ void Renderer::copyBuffer(vk::Buffer& src, vk::Buffer& dst, size_t size,
 }
 
 void Renderer::updateDescriptorSets() {
-  for (int i = 0; i < descriptorSets_.size(); i++) {
+  for (int i = 0; i < worldUniformDescriptorSets_.size(); i++) {
     std::vector<vk::WriteDescriptorSet> writeInfos(1);
-    auto& set = descriptorSets_[i];
+    auto& set = worldUniformDescriptorSets_[i];
     // bind MVP buffer
     vk::DescriptorBufferInfo bufferInfoMVP;
-    bufferInfoMVP.setBuffer(deviceUniformBuffers_[i]->buffer)
+    bufferInfoMVP.setBuffer(uniformWorldBuffers[i]->buffer)
         .setOffset(0)
-        .setRange(sizeof(matrices));
+        .setRange(sizeof(worldMatrices_));
 
     writeInfos[0]
         .setDescriptorType(vk::DescriptorType::eUniformBuffer)

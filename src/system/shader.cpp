@@ -24,7 +24,9 @@ Shader::Shader(const std::string &vertexSource, const std::string &fragSource) {
 
 Shader::~Shader() {
   auto &device = Context::GetInstance().device;
-  device.destroyDescriptorSetLayout(descriptorSetLayout);
+  for (auto &layout : descriptorSetLayouts) {
+    device.destroyDescriptorSetLayout(layout);
+  }
   device.destroyShaderModule(vertexModule);
   device.destroyShaderModule(fragmentModule);
 }
@@ -49,6 +51,8 @@ void Shader::initStage() {
 }
 
 void Shader::initDescriptorSetLayouts() {
+  descriptorSetLayouts.resize(2);
+
   auto &device = Context::GetInstance().device;
   // mvp and color
   vk::DescriptorSetLayoutBinding uboLayoutBinding;
@@ -56,6 +60,10 @@ void Shader::initDescriptorSetLayouts() {
       .setDescriptorCount(1)
       .setDescriptorType(vk::DescriptorType::eUniformBuffer)
       .setStageFlags(vk::ShaderStageFlagBits::eVertex);
+  vk::DescriptorSetLayoutCreateInfo setLayoutInfo;
+  setLayoutInfo.setBindings(uboLayoutBinding);
+  descriptorSetLayouts.push_back(
+      device.createDescriptorSetLayout(setLayoutInfo));
 
   // sampler
   vk::DescriptorSetLayoutBinding samplerLayoutBinding;
@@ -64,13 +72,11 @@ void Shader::initDescriptorSetLayouts() {
       .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
       .setStageFlags(vk::ShaderStageFlagBits::eFragment);
 
-  std::array<vk::DescriptorSetLayoutBinding, 2> bindings = {
-      uboLayoutBinding, samplerLayoutBinding};
-
   // createSetLayout, 对应.frag中layout的set，binding对应binding
   vk::DescriptorSetLayoutCreateInfo setLayoutInfo;
-  setLayoutInfo.setBindings(bindings);
-  descriptorSetLayout = device.createDescriptorSetLayout(setLayoutInfo);
+  setLayoutInfo.setBindings(samplerLayoutBinding);
+  descriptorSetLayouts.push_back(
+      device.createDescriptorSetLayout(setLayoutInfo));
 }
 
 std::vector<vk::PushConstantRange> Shader::GetPushConstantRange() const {

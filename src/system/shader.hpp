@@ -9,7 +9,7 @@ class Shader final : public Singlton<Shader> {
  public:
   vk::ShaderModule vertexModule;
   vk::ShaderModule fragmentModule;
-  vk::DescriptorSetLayout descriptorSetLayout;
+  std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
 
   ~Shader();
 

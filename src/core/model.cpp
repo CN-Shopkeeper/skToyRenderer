@@ -102,19 +102,4 @@ void Model::createIndicesBuffer() {
       });
 }
 
-void Model::createUniformBuffers(int maxFlight) {
-  size_t size = sizeof(MVPMatrix);
-  uniformBuffers.resize(maxFlight);
-
-  for (size_t i = 0; i < maxFlight; i++) {
-    uniformBuffers[i].reset(
-        new Buffer{size, vk::BufferUsageFlagBits::eUniformBuffer,
-                   vk::MemoryPropertyFlagBits::eHostCoherent |
-                       vk::MemoryPropertyFlagBits::eHostVisible});
-  }
-}
-
-void Model::BufferUniformData(int nowFlight) {
-  memcpy(uniformBuffers[nowFlight]->map, &mvpMatrix, sizeof(mvpMatrix));
-}
 }  // namespace sktr

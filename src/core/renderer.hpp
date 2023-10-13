@@ -7,17 +7,12 @@
 #include "utils/math.hpp"
 
 namespace sktr {
-struct Matrices {
-  glm::mat4 project;
-  glm::mat4 view;
-};
 class Renderer final {
  public:
   Renderer(int width, int height, int maxFlightCount = 2);
   ~Renderer();
 
-  void SetProjection(int left, int right, int bottom, int top, int near,
-                     int far);
+  void SetProjection(float fov, float aspect, float near, float far);
   void SetDrawColor(const Color& color);
 
   // 开启render pass 并绑定渲染管线
@@ -36,7 +31,7 @@ class Renderer final {
   int curFrame_;
   uint32_t imageIndex_;
 
-  Matrices matrices;
+  WorldMatrices worldMatrices_;
 
   std::vector<vk::CommandBuffer> cmdBuffs_;
 
@@ -44,19 +39,18 @@ class Renderer final {
   std::vector<vk::Semaphore> renderFinishSems_;
   std::vector<vk::Fence> fences_;
 
-  std::unique_ptr<Buffer> hostRectVertexBuffer_;
-  std::unique_ptr<Buffer> deviceRectVertexBuffer_;
-  std::unique_ptr<Buffer> hostRectIndicesBuffer_;
-  std::unique_ptr<Buffer> deviceRectIndicesBuffer_;
-  std::unique_ptr<Buffer> hostLineVertexBuffer_;
-  std::unique_ptr<Buffer> deviceLineVertexBuffer_;
+  // std::unique_ptr<Buffer> hostRectVertexBuffer_;
+  // std::unique_ptr<Buffer> deviceRectVertexBuffer_;
+  // std::unique_ptr<Buffer> hostRectIndicesBuffer_;
+  // std::unique_ptr<Buffer> deviceRectIndicesBuffer_;
+  // std::unique_ptr<Buffer> hostLineVertexBuffer_;
+  // std::unique_ptr<Buffer> deviceLineVertexBuffer_;
 
   // std::vector<std::unique_ptr<Buffer>> hostColorBuffers_;
   // std::vector<std::unique_ptr<Buffer>> deviceColorBuffers_;
-  std::vector<std::unique_ptr<Buffer>> hostUniformBuffers_;
-  std::vector<std::unique_ptr<Buffer>> deviceUniformBuffers_;
+  std::vector<std::unique_ptr<Buffer>> uniformWorldBuffers;
 
-  std::vector<DescriptorSetManager::SetInfo> descriptorSets_;
+  std::vector<DescriptorSetManager::SetInfo> worldUniformDescriptorSets_;
   Texture* whiteTexture;
   Color drawColor_ = {1, 1, 1};
 
@@ -65,15 +59,7 @@ class Renderer final {
   void createFences();
 
   void createBuffers();
-  void createVertexBuffer();
-  void createIndicesBuffer();
   void createUniformBuffers();
-
-  void bufferRectData();
-  void bufferRectVertexData();
-  void bufferRectIndicesData();
-
-  void bufferLineData(const Vec2& p1, const Vec2& p2);
 
   void bufferMVPData();
 

@@ -1,10 +1,24 @@
 #pragma once
 
 #include "pch.hpp"
-
+#include "utils/singlton.hpp"
 namespace sktr {
 
-class DescriptorSetManager final {
+class DescriptorSetManager : public Singlton<DescriptorSetManager> {
+ public:
+  struct SetInfo {
+    vk::DescriptorSet set;
+    vk::DescriptorPool pool;
+  };
+
+  ~DescriptorSetManager();
+
+  std::vector<SetInfo> AllocBufferSets(uint32_t num);
+
+  SetInfo AllocImageSet();
+
+  void FreeImageSet(const SetInfo&);
+
  private:
   struct PoolInfo {
     vk::DescriptorPool pool_;
@@ -19,32 +33,10 @@ class DescriptorSetManager final {
   std::vector<PoolInfo> avalibleImageSetPool_;
 
   void addImageSetPool();
+  void createBufferSetPool();
   PoolInfo& getAvaliableImagePoolInfo();
 
   uint32_t maxFlight_;
-  static std::unique_ptr<DescriptorSetManager> instance_;
-
- public:
-  struct SetInfo {
-    vk::DescriptorSet set;
-    vk::DescriptorPool pool;
-  };
-
-  static void Init(uint32_t maxFlight) {
-    instance_.reset(new DescriptorSetManager(maxFlight));
-  }
-
-  static void Quit() { instance_.reset(); }
-
-  static DescriptorSetManager& GetInstance() { return *instance_; }
-
-  ~DescriptorSetManager();
-
-  std::vector<SetInfo> AllocBufferSets(uint32_t num);
-
-  SetInfo AllocImageSet();
-
-  void FreeImageSet(const SetInfo&);
 };
 
 }  // namespace sktr
