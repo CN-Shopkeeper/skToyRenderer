@@ -1,6 +1,6 @@
 #include "shader.hpp"
 
-#include "core/context.hpp"
+#include "sktr/core/context.hpp"
 
 namespace sktr {
 

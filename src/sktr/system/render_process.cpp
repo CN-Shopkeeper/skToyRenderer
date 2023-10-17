@@ -1,7 +1,7 @@
 #include "render_process.hpp"
 
-#include "core/context.hpp"
 #include "shader.hpp"
+#include "sktr/core/context.hpp"
 #include "swapchain.hpp"
 
 namespace sktr {

@@ -1,15 +1,15 @@
 #pragma once
 
-#include "pch.hpp"
 #include "renderer.hpp"
-#include "system/command_manager.hpp"
-#include "system/render_process.hpp"
-#include "system/sampler.hpp"
-#include "system/shader.hpp"
-#include "system/swapchain.hpp"
-#include "utils/common.hpp"
-#include "utils/singlton.hpp"
-#include "utils/tools.hpp"
+#include "sktr/pch.hpp"
+#include "sktr/system/command_manager.hpp"
+#include "sktr/system/render_process.hpp"
+#include "sktr/system/sampler.hpp"
+#include "sktr/system/shader.hpp"
+#include "sktr/system/swapchain.hpp"
+#include "sktr/utils/common.hpp"
+#include "sktr/utils/singlton.hpp"
+#include "sktr/utils/tools.hpp"
 
 namespace sktr {
 class Context final : public Singlton<Context> {

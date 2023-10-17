@@ -1,7 +1,7 @@
 #pragma once
-#include "pch.hpp"
-#include "system/buffer.hpp"
-#include "system/descriptor_manager.hpp"
+#include "sktr/pch.hpp"
+#include "sktr/system/buffer.hpp"
+#include "sktr/system/descriptor_manager.hpp"
 
 namespace sktr {
 

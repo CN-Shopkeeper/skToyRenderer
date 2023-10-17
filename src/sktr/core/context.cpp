@@ -143,7 +143,7 @@ QueueFamilyIndices Context::queryQueueFamilyIndices(
     vk::PhysicalDevice physicalDevice) {
   QueueFamilyIndices queueFamilyIndices_;
   // 所有队列的属性
-  auto properties = phyDevice.getQueueFamilyProperties();
+  auto properties = physicalDevice.getQueueFamilyProperties();
   for (int i = 0; i < properties.size(); i++) {
     const auto& property = properties[i];
     if (property.queueFlags | vk::QueueFlagBits::eGraphics) {
@@ -151,7 +151,7 @@ QueueFamilyIndices Context::queryQueueFamilyIndices(
       // property.queueCount;
       queueFamilyIndices_.graphicsQueue = i;
     }
-    if (phyDevice.getSurfaceSupportKHR(i, surface)) {
+    if (physicalDevice.getSurfaceSupportKHR(i, surface)) {
       queueFamilyIndices_.presentQueue = i;
     }
 

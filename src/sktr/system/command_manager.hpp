@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pch.hpp"
+#include "sktr/pch.hpp"
 
 namespace sktr {
 class CommandManager final {

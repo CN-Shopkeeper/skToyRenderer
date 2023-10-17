@@ -1,6 +1,6 @@
 #include "swapchain.hpp"
 
-#include "core/context.hpp"
+#include "sktr/core/context.hpp"
 
 namespace sktr {
 
@@ -95,7 +95,7 @@ void Swapchain::queryInfo(int w, int h) {
       details.capabilities.minImageCount + 1,
       details.capabilities.minImageCount, details.capabilities.maxImageCount);
 
-  info.imageExtent = chooseSwapExtent(details.capabilities);
+  info.imageExtent = chooseSwapExtent(details.capabilities, w, h);
 
   info.transform = details.capabilities.currentTransform;
 
@@ -159,7 +159,7 @@ void Swapchain::CreateFramebuffers(int w, int h) {
   }
 }
 
-vk::SurfaceFormatKHR chooseSwapSurfaceFormat(
+vk::SurfaceFormatKHR Swapchain::chooseSwapSurfaceFormat(
     const std::vector<vk::SurfaceFormatKHR>& availableFormats) {
   for (const auto& availableFormat : availableFormats) {
     if (availableFormat.format == vk::Format::eB8G8R8A8Srgb &&
@@ -170,7 +170,7 @@ vk::SurfaceFormatKHR chooseSwapSurfaceFormat(
   return availableFormats[0];
 }
 
-vk::PresentModeKHR chooseSwapPresentMode(
+vk::PresentModeKHR Swapchain::chooseSwapPresentMode(
     const std::vector<vk::PresentModeKHR>& availablePresentModes) {
   for (const auto& availablePresentMode : availablePresentModes) {
     if (availablePresentMode == vk::PresentModeKHR::eMailbox) {
@@ -180,8 +180,8 @@ vk::PresentModeKHR chooseSwapPresentMode(
   return vk::PresentModeKHR::eFifo;
 }
 
-vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities,
-                              int width, int height) {
+vk::Extent2D Swapchain::chooseSwapExtent(
+    const vk::SurfaceCapabilitiesKHR& capabilities, int width, int height) {
   if (capabilities.currentExtent.width !=
       std::numeric_limits<uint32_t>::max()) {
     return capabilities.currentExtent;

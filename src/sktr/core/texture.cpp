@@ -1,7 +1,7 @@
 #include "texture.hpp"
 
 #include "context.hpp"
-#include "system/buffer.hpp"
+#include "sktr/system/buffer.hpp"
 
 namespace sktr {
 
@@ -80,7 +80,7 @@ ImageResource ImageResource::CreateDepthResource(
   resource.allocMemory(properties);
   Context::GetInstance().device.bindImageMemory(resource.image, resource.memory,
                                                 0);
-  resource.createImageView(format, vk::ImageAspectFlagBits::eColor, mipLevels);
+  resource.createImageView(format, vk::ImageAspectFlagBits::eDepth, mipLevels);
   resource.transitionImageLayout(
       format, vk::ImageLayout::eUndefined,
       vk::ImageLayout::eDepthStencilAttachmentOptimal, mipLevels);

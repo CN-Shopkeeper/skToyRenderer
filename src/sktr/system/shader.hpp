@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pch.hpp"
-#include "utils/singlton.hpp"
+#include "sktr/pch.hpp"
+#include "sktr/utils/singlton.hpp"
 
 namespace sktr {
 

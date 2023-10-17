@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pch.hpp"
+#include "sktr/pch.hpp"
 
 constexpr uint32_t WindowWidth = 800;
 constexpr uint32_t WindowHeight = 600;

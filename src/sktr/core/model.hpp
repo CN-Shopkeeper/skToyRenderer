@@ -1,8 +1,8 @@
 #pragma once
-#include "pch.hpp"
-#include "system/buffer.hpp"
+#include "sktr/pch.hpp"
+#include "sktr/system/buffer.hpp"
 #include "texture.hpp"
-#include "utils/common.hpp"
+#include "sktr/utils/common.hpp"
 
 namespace sktr {
 

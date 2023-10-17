@@ -15,8 +15,8 @@
 
 #pragma once
 
-#include "core/texture.hpp"
-#include "pch.hpp"
+#include "sktr/core/texture.hpp"
+#include "sktr/pch.hpp"
 
 namespace sktr {
 class Swapchain final {
@@ -67,6 +67,7 @@ class Swapchain final {
       const std::vector<vk::SurfaceFormatKHR>& availableFormats);
   vk::PresentModeKHR chooseSwapPresentMode(
       const std::vector<vk::PresentModeKHR>& availablePresentModes);
-  vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
+  vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities,
+                                int width, int height);
 };
 }  // namespace sktr

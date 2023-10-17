@@ -19,7 +19,7 @@ Renderer::Renderer(int width, int height, int maxFlightCount)
       DescriptorSetManager::GetInstance().AllocBufferSets(maxFlightCount);
   updateDescriptorSets();
 
-  createWhiteTexture();
+  // createWhiteTexture();
   SetDrawColor(Color{1, 1, 1});
 }
 
@@ -221,6 +221,8 @@ void Renderer::DrawModel(const Model& model) {
 //                     sizeof(Color), &drawColor_);
 //   cmd.draw(2, 1, 0, 0);
 // }
+
+void Renderer::createWhiteTexture() {}
 
 void Renderer::createSemaphores() {
   auto& device = Context::GetInstance().device;

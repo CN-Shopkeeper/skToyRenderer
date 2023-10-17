@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/context.hpp"
+#include "sktr/core/context.hpp"
 
 namespace sktr {
 void Init(const std::vector<const char *> &extensions, CreateSurfaceFunc func,

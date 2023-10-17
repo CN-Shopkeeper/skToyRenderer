@@ -37,7 +37,7 @@ file(GLOB_RECURSE HEADER "src/*.hpp")
 file(GLOB_RECURSE SRC "src/*.cpp")
 
 add_library(${ProjectName} STATIC ${SRC} ${HEADER})
-target_precompile_headers(${ProjectName} PUBLIC "src/pch.hpp")
+target_precompile_headers(${ProjectName} PUBLIC "src/sktr/pch.hpp")
 target_include_directories(${ProjectName} PUBLIC "src")
 target_include_directories(${ProjectName} PUBLIC ${TINY_OBJECT_DIR})
 target_link_libraries(${ProjectName} PUBLIC Vulkan::Vulkan)

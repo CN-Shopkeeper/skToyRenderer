@@ -1,6 +1,6 @@
 #include "descriptor_manager.hpp"
 
-#include "core/context.hpp"
+#include "sktr/core/context.hpp"
 
 namespace sktr {
 

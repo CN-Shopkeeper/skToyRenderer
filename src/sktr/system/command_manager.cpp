@@ -1,6 +1,6 @@
 #include "command_manager.hpp"
 
-#include "core/context.hpp"
+#include "sktr/core/context.hpp"
 
 namespace sktr {
 CommandManager::CommandManager() { pool_ = createCommandPool(); }

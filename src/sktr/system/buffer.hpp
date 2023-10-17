@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pch.hpp"
-#include "utils/tools.hpp"
+#include "sktr/pch.hpp"
+#include "sktr/utils/tools.hpp"
 
 namespace sktr {
 class Buffer final {
