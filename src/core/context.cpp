@@ -45,11 +45,8 @@ void Context::createInstance(const std::vector<const char*>& extensions) {
 }
 
 bool Context::checkValidationLayerSupport() {
-  uint32_t layerCount;
-  vk::enumerateInstanceLayerProperties(&layerCount, nullptr);
-
-  std::vector<vk::LayerProperties> availableLayers(layerCount);
-  vk::enumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+  std::vector<vk::LayerProperties> availableLayers =
+      vk::enumerateInstanceLayerProperties();
 
   for (const char* layerName : ValidationLayers) {
     bool layerFound = false;
@@ -220,12 +217,8 @@ bool Context::isDeviceSuitable(vk::PhysicalDevice physicalDevice) {
 }
 
 bool Context::checkDeviceExtensionSupport(vk::PhysicalDevice physicalDevice) {
-  uint32_t extensionCount;
-  physicalDevice.enumerateDeviceExtensionProperties(nullptr, &extensionCount,
-                                                    nullptr);
-  std::vector<vk::ExtensionProperties> availableExtensions(extensionCount);
-  physicalDevice.enumerateDeviceExtensionProperties(nullptr, &extensionCount,
-                                                    availableExtensions.data());
+  std::vector<vk::ExtensionProperties> availableExtensions =
+      physicalDevice.enumerateDeviceExtensionProperties();
 
   std::set<std::string> requiredExtensions(DeviceExtensions.begin(),
                                            DeviceExtensions.end());

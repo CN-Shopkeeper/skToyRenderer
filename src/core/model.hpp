@@ -12,7 +12,7 @@ class Model final {
   std::vector<Vertex> vertices;
   std::vector<uint32_t> indices;
   glm ::mat4 modelMatrix;
-  Texture texture;
+  Texture* texture;
 
   std::unique_ptr<Buffer> vertexBuffer;
   std::unique_ptr<Buffer> indicesBuffer;

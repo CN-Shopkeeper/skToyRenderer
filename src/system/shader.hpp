@@ -11,6 +11,14 @@ class Shader final : public Singlton<Shader> {
   vk::ShaderModule fragmentModule;
   std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
 
+  /**
+   * @brief
+   * @note
+   * @param  &verteSource:定点着色器的源代码
+   * @param  &fragSource:片段着色器的源代码
+   * @retval None
+   */
+  Shader(const std::string &verteSource, const std::string &fragSource);
   ~Shader();
 
   std::vector<vk::PipelineShaderStageCreateInfo> GetStages();
@@ -20,14 +28,6 @@ class Shader final : public Singlton<Shader> {
  private:
   std::vector<vk::PipelineShaderStageCreateInfo> stages_;
 
-  /**
-   * @brief
-   * @note
-   * @param  &verteSource:定点着色器的源代码
-   * @param  &fragSource:片段着色器的源代码
-   * @retval None
-   */
-  Shader(const std::string &verteSource, const std::string &fragSource);
   void initStage();
 
   void initDescriptorSetLayouts();

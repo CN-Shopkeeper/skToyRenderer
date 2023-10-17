@@ -11,6 +11,7 @@ class DescriptorSetManager : public Singlton<DescriptorSetManager> {
     vk::DescriptorPool pool;
   };
 
+  DescriptorSetManager(uint32_t maxFlight);
   ~DescriptorSetManager();
 
   std::vector<SetInfo> AllocBufferSets(uint32_t num);
@@ -24,8 +25,6 @@ class DescriptorSetManager : public Singlton<DescriptorSetManager> {
     vk::DescriptorPool pool_;
     uint32_t remainNum_;
   };
-
-  DescriptorSetManager(uint32_t maxFlight);
 
   PoolInfo bufferSetPool_;
 

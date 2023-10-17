@@ -29,6 +29,7 @@ class Context final : public Singlton<Context> {
   bool windowMinimized = false;
   bool frameBufferResized = false;
 
+  Context(const std::vector<const char *> &extensions, CreateSurfaceFunc func);
   ~Context();
 
   void ResizeSwapchainImage(int w, int h);
@@ -51,8 +52,6 @@ class Context final : public Singlton<Context> {
   SwapChainSupportDetails QuerySwapChainSupport(vk::PhysicalDevice device);
 
  private:
-  Context(const std::vector<const char *> &extensions, CreateSurfaceFunc func);
-
   CreateSurfaceFunc func_;
 
   void createInstance(const std::vector<const char *> &extensions);
@@ -60,8 +59,7 @@ class Context final : public Singlton<Context> {
   void pickupPhysicalDevice();
   void createDevice();
 
-  QueueFamilyIndices Context::queryQueueFamilyIndices(
-      vk::PhysicalDevice physicalDevice);
+  QueueFamilyIndices queryQueueFamilyIndices(vk::PhysicalDevice physicalDevice);
   bool checkDeviceExtensionSupport(vk::PhysicalDevice);
   bool isDeviceSuitable(vk::PhysicalDevice);
   vk::SampleCountFlagBits getMaxUsableSampleCount();

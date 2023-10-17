@@ -106,6 +106,7 @@ bool Renderer::StartRender() {
       .setClearValues(clearValue);
 
   cmdBuff.beginRenderPass(renderPassBegin, vk::SubpassContents::eInline);
+  return true;
 }
 
 void Renderer::EndRender() {
@@ -155,7 +156,7 @@ void Renderer::DrawModel(const Model& model) {
                              worldUniformDescriptorSets_[curFrame_].set, {});
   cmdBuff.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
                              renderProcess->pipelineLayout, 1,
-                             model.texture.set.set, {});
+                             model.texture->set.set, {});
   cmdBuff.bindVertexBuffers(0, model.vertexBuffer->buffer, offset);
   cmdBuff.bindIndexBuffer(model.indicesBuffer->buffer, 0,
                           vk::IndexType::eUint32);
