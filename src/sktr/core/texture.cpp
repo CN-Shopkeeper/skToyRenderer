@@ -212,7 +212,7 @@ void Texture::init(void* data, uint32_t w, uint32_t h, uint32_t mipLevels,
 
   transitionImageLayoutFromUndefine2Dst();
   transformData2Image(*buffer, w, h);
-  transitionImageLayoutFromDst2Optimal();
+  // transitionImageLayoutFromDst2Optimal();
 
   generateMipmaps(w, h);
 
@@ -225,7 +225,7 @@ void Texture::init(void* data, uint32_t w, uint32_t h, uint32_t mipLevels,
 Texture::~Texture() {
   auto& device = Context::GetInstance().device;
   DescriptorSetManager::GetInstance().FreeImageSet(set);
-  ImageResource::~ImageResource();
+  // ImageResource::~ImageResource();
 }
 
 void Texture::updateDescriptorSet() {
@@ -245,7 +245,7 @@ void Texture::updateDescriptorSet() {
 
 void Texture::transitionImageLayoutFromUndefine2Dst() {
   transitionImageLayout(vk::Format::eR8G8B8A8Srgb, vk::ImageLayout::eUndefined,
-                        vk::ImageLayout::eTransferDstOptimal, 1);
+                        vk::ImageLayout::eTransferDstOptimal, mipLevels_);
 }
 
 void Texture::transitionImageLayoutFromDst2Optimal() {
@@ -283,8 +283,8 @@ void Texture::generateMipmaps(int32_t texWidth, int32_t texHeight) {
   vk::FormatProperties formatProperties =
       Context::GetInstance().phyDevice.getFormatProperties(
           vk::Format::eR8G8B8A8Srgb);
-  if (formatProperties.optimalTilingFeatures &
-      vk::FormatFeatureFlagBits::eSampledImageFilterLinear) {
+  if (!(formatProperties.optimalTilingFeatures &
+        vk::FormatFeatureFlagBits::eSampledImageFilterLinear)) {
     throw std::runtime_error(
         "texture image format does not support linear blitting!");
   }
@@ -297,7 +297,8 @@ void Texture::generateMipmaps(int32_t texWidth, int32_t texHeight) {
         range.setLayerCount(1)
             .setBaseArrayLayer(0)
             .setLevelCount(1)
-            .setBaseMipLevel(0);
+            .setBaseMipLevel(0)
+            .setAspectMask(vk::ImageAspectFlagBits::eColor);
         barrier
             .setImage(image)
             // 没有queueFamily的依赖关系
@@ -347,10 +348,20 @@ void Texture::generateMipmaps(int32_t texWidth, int32_t texHeight) {
           cmdBuff.blitImage(image, vk::ImageLayout::eTransferSrcOptimal, image,
                             vk::ImageLayout::eTransferDstOptimal, bilt,
                             vk::Filter::eLinear);
+
+          barrier.setOldLayout(vk::ImageLayout::eTransferSrcOptimal)
+              .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+              .setSrcAccessMask(vk::AccessFlagBits::eTransferRead)
+              .setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+
+          cmdBuff.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+                                  vk::PipelineStageFlagBits::eFragmentShader,
+                                  {}, {}, nullptr, barrier);
+
           if (mipWidth > 1) mipWidth /= 2;
           if (mipHeight > 1) mipHeight /= 2;
         }
-        range.setBaseMipLevel(mipLevels_);
+        range.setBaseMipLevel(mipLevels_ - 1);
         barrier.setSubresourceRange(range)
             .setOldLayout(vk::ImageLayout::eTransferDstOptimal)
             .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)

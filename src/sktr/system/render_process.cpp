@@ -34,7 +34,8 @@ vk::Pipeline RenderProcess::createPipeline(int width, int height,
 
   vk::PipelineDynamicStateCreateInfo dynamicStateInfo{};
   dynamicStateInfo.setDynamicStates(dynamicStates);
-  graphicsPipelineInfo.setPDynamicState(&dynamicStateInfo);
+  //   暂不使用
+  //   graphicsPipelineInfo.setPDynamicState(&dynamicStateInfo);
 
   // 1. vertex input
   vk::PipelineVertexInputStateCreateInfo pipelineVertexInputeStateInfo;
@@ -211,14 +212,14 @@ void RenderProcess::initRenderPass() {
       .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
 
   vk::AttachmentReference colorAttachmentResolveRef{};
-  colorAttachmentRef.setAttachment(2);
-  colorAttachmentRef.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
+  colorAttachmentResolveRef.setAttachment(2);
+  colorAttachmentResolveRef.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
   // depth
   vk::AttachmentDescription depthAttachment{};
   depthAttachment.setFormat(findDepthFormat())
       .setSamples(ctx.sampler.msaaSamples)
-      .setLoadOp(vk::AttachmentLoadOp::eDontCare)
+      .setLoadOp(vk::AttachmentLoadOp::eClear)
       .setStoreOp(vk::AttachmentStoreOp::eDontCare)
       .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
       .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
@@ -251,6 +252,7 @@ void RenderProcess::initRenderPass() {
       .setSrcSubpass(VK_SUBPASS_EXTERNAL)
       // 也是dst是结果subpass，也就是我们设置的。下标
       .setDstSubpass(0)
+      .setSrcAccessMask(vk::AccessFlagBits::eNone)
       // 设置dst的访问权限
       .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite |
                         vk::AccessFlagBits::eDepthStencilAttachmentWrite)

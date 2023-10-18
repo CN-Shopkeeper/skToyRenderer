@@ -96,14 +96,16 @@ bool Renderer::StartRender() {
 
   vk::RenderPassBeginInfo renderPassBegin;
   vk::Rect2D area;
-  vk::ClearValue clearValue;
-  clearValue.color =
+  std::array<vk::ClearValue, 2> clearValues{};
+  clearValues[0].color =
       vk::ClearColorValue(std::array<float, 4>{0.2f, 0.2f, 0.2f, 1.0f});
+  clearValues[1].depthStencil = vk::ClearDepthStencilValue{1.0f, 0};
+
   area.setOffset({0, 0}).setExtent(swapchain->info.imageExtent);
   renderPassBegin.setRenderPass(renderProcess->renderPass)
       .setRenderArea(area)
       .setFramebuffer(swapchain->framebuffers[imageIndex_])
-      .setClearValues(clearValue);
+      .setClearValues(clearValues);
 
   cmdBuff.beginRenderPass(renderPassBegin, vk::SubpassContents::eInline);
   return true;

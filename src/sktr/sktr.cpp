@@ -6,14 +6,14 @@ void Init(const std::vector<const char *> &extensions, CreateSurfaceFunc func,
           int w, int h) {
   Context::Init(extensions, func);
   auto &ctx = Context::GetInstance();
+  // ! CommandPool before renderer
+  ctx.InitCommandPool();
   ctx.InitSwapchain(w, h);
   Shader::Init(ReadWholeFile("./shaders/vert.spv"),
                ReadWholeFile("./shaders/frag.spv"));
   ctx.InitRenderProcess(w, h);
   // ! after renderPass
   ctx.swapchain->CreateFramebuffers(w, h);
-  // ! CommandPool before renderer
-  ctx.InitCommandPool();
   DescriptorSetManager::Init(2);
   ctx.InitSampler();
   ctx.InitRenderer(w, h);

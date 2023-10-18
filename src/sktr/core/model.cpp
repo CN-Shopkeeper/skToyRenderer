@@ -6,7 +6,7 @@
 #include "context.hpp"
 namespace sktr {
 Model::Model(const std::string name, const std::string modelPath,
-             const std::string mtlPath)
+             const std::string mtlPath, bool normalized)
     : name(name) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
@@ -55,17 +55,23 @@ Model::Model(const std::string name, const std::string modelPath,
       indices.push_back(uniqueVertices[vertex]);
     }
   }
-  auto scale_factor =
-      2.0 / std::max(maxX - minX, std::max(maxY - minY, maxZ - minZ));
-  for (auto& vertex : vertices) {
-    vertex.pos.x = (vertex.pos.x - minX) * scale_factor - 1.0;
-    vertex.pos.y = (vertex.pos.y - minY) * scale_factor - 1.0;
-    vertex.pos.z = (vertex.pos.z - minZ) * scale_factor;
+  if (normalized) {
+    auto scale_factor =
+        2.0 / std::max(maxX - minX, std::max(maxY - minY, maxZ - minZ));
+    for (auto& vertex : vertices) {
+      vertex.pos.x = (vertex.pos.x - minX) * scale_factor - 1.0;
+      vertex.pos.y = (vertex.pos.y - minY) * scale_factor - 1.0;
+      vertex.pos.z = (vertex.pos.z - minZ) * scale_factor;
+    }
   }
+
+  createVertexBuffer();
+  createIndicesBuffer();
 }
 
+
 void Model::createVertexBuffer() {
-  auto size = sizeof(vertices);
+  auto size = sizeof(vertices[0]) * vertices.size();
   Buffer stagingBuffer = Buffer{size, vk::BufferUsageFlagBits::eTransferSrc,
                                 vk::MemoryPropertyFlagBits::eHostVisible |
                                     vk::MemoryPropertyFlagBits::eHostCoherent};
@@ -84,7 +90,7 @@ void Model::createVertexBuffer() {
 }
 
 void Model::createIndicesBuffer() {
-  auto size = sizeof(indices);
+  auto size = sizeof(indices[0]) * indices.size();
   Buffer stagingBuffer = Buffer{size, vk::BufferUsageFlagBits::eTransferSrc,
                                 vk::MemoryPropertyFlagBits::eHostVisible |
                                     vk::MemoryPropertyFlagBits::eHostCoherent};

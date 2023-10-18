@@ -1,8 +1,8 @@
 #pragma once
 #include "sktr/pch.hpp"
 #include "sktr/system/buffer.hpp"
-#include "texture.hpp"
 #include "sktr/utils/common.hpp"
+#include "texture.hpp"
 
 namespace sktr {
 
@@ -17,7 +17,9 @@ class Model final {
   std::unique_ptr<Buffer> vertexBuffer;
   std::unique_ptr<Buffer> indicesBuffer;
 
-  Model(const std::string, const std::string, const std::string mtlPath = "");
+  Model(const std::string, const std::string, const std::string mtlPath = "",
+        bool normalized = false);
+        
   void BufferUniformData(int nowFlight);
 
   void SetModelM(glm::mat4 model) { modelMatrix = model; }

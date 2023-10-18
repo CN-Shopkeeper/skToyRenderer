@@ -45,8 +45,6 @@ void Swapchain::createSwapchain() {
   createImageViews();
 
   createImageResource(width, height);
-
-  CreateFramebuffers(width, height);
 }
 
 void Swapchain::Recreate() {

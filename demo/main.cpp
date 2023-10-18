@@ -74,6 +74,8 @@ int main(int argc, char** argv) {
   }
 
   sktr::TextureManager::GetInstance().Destroy(viking.texture);
+  viking.vertexBuffer.reset();
+  viking.indicesBuffer.reset();
 
   sktr::Quit();
   SDL_DestroyWindow(window);

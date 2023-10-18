@@ -62,12 +62,11 @@ void Shader::initDescriptorSetLayouts() {
       .setStageFlags(vk::ShaderStageFlagBits::eVertex);
   vk::DescriptorSetLayoutCreateInfo uboSetLayoutInfo;
   uboSetLayoutInfo.setBindings(uboLayoutBinding);
-  descriptorSetLayouts.push_back(
-      device.createDescriptorSetLayout(uboSetLayoutInfo));
+  descriptorSetLayouts[0] = device.createDescriptorSetLayout(uboSetLayoutInfo);
 
   // sampler
   vk::DescriptorSetLayoutBinding samplerLayoutBinding;
-  samplerLayoutBinding.setBinding(1)
+  samplerLayoutBinding.setBinding(0)
       .setDescriptorCount(1)
       .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
       .setStageFlags(vk::ShaderStageFlagBits::eFragment);
@@ -75,8 +74,8 @@ void Shader::initDescriptorSetLayouts() {
   // createSetLayout, 对应.frag中layout的set，binding对应binding
   vk::DescriptorSetLayoutCreateInfo samplerSetLayoutInfo;
   samplerSetLayoutInfo.setBindings(samplerLayoutBinding);
-  descriptorSetLayouts.push_back(
-      device.createDescriptorSetLayout(samplerSetLayoutInfo));
+  descriptorSetLayouts[1] =
+      device.createDescriptorSetLayout(samplerSetLayoutInfo);
 }
 
 std::vector<vk::PushConstantRange> Shader::GetPushConstantRange() const {
