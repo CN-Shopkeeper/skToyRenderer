@@ -7,7 +7,7 @@
 namespace sktr {
 Model::Model(const std::string name, const std::string modelPath,
              const std::string mtlPath, bool normalized)
-    : name(name) {
+    : name(name), modelMatrix(glm::identity<glm::mat4>()) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
   std::vector<tinyobj::material_t> materials;
@@ -68,7 +68,6 @@ Model::Model(const std::string name, const std::string modelPath,
   createVertexBuffer();
   createIndicesBuffer();
 }
-
 
 void Model::createVertexBuffer() {
   auto size = sizeof(vertices[0]) * vertices.size();
