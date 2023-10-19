@@ -3,8 +3,8 @@
 #include "sktr/pch.hpp"
 #include "sktr/system/buffer.hpp"
 #include "sktr/system/descriptor_manager.hpp"
-#include "texture.hpp"
 #include "sktr/utils/math.hpp"
+#include "texture.hpp"
 
 namespace sktr {
 class Renderer final {
@@ -13,6 +13,7 @@ class Renderer final {
   ~Renderer();
 
   void SetProjection(float fov, float aspect, float near, float far);
+  void SetView(Mat4 view);
   void SetDrawColor(const Color& color);
 
   // 开启render pass 并绑定渲染管线

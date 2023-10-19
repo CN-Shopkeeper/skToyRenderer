@@ -17,9 +17,9 @@ class Model final {
   std::unique_ptr<Buffer> vertexBuffer;
   std::unique_ptr<Buffer> indicesBuffer;
 
-  Model(const std::string, const std::string, const std::string mtlPath = "",
-        bool normalized = false);
-        
+  Model(const std::string name, const std::string modelPath,
+        const std::string mtlPath = "", bool normalized = false);
+
   void BufferUniformData(int nowFlight);
 
   void SetModelM(glm::mat4 model) { modelMatrix = model; }

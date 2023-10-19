@@ -14,6 +14,8 @@ Renderer::Renderer(int width, int height, int maxFlightCount)
 
   initMats();
   SetProjection(glm::radians(45.0f), width / (float)height, 0.1f, 10.0f);
+  SetView(glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+                      glm::vec3(0.0f, 0.0f, 1.0f)));
 
   worldUniformDescriptorSets_ =
       DescriptorSetManager::GetInstance().AllocBufferSets(maxFlightCount);
@@ -98,7 +100,7 @@ bool Renderer::StartRender() {
   vk::Rect2D area;
   std::array<vk::ClearValue, 2> clearValues{};
   clearValues[0].color =
-      vk::ClearColorValue(std::array<float, 4>{0.2f, 0.2f, 0.2f, 1.0f});
+      vk::ClearColorValue(std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f});
   clearValues[1].depthStencil = vk::ClearDepthStencilValue{1.0f, 0};
 
   area.setOffset({0, 0}).setExtent(swapchain->info.imageExtent);
@@ -285,7 +287,12 @@ void Renderer::initMats() {
 
 void Renderer::SetProjection(float fov, float aspect, float near, float far) {
   worldMatrices_.proj = glm::perspective(fov, aspect, near, far);
-  worldMatrices_.proj *= -1;
+  worldMatrices_.proj[1][1] *= -1;
+  bufferWorldData();
+}
+
+void Renderer::SetView(Mat4 view) {
+  worldMatrices_.view = view;
   bufferWorldData();
 }
 
