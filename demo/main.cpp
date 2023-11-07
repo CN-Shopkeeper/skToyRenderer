@@ -76,7 +76,8 @@ int main(int argc, char** argv) {
 
   renderer.SetDrawColor(sktr::Color{1, 1, 1});
 
-  sktr::Model viking = sktr::Model{"viking", "models/viking_room.obj"};
+  sktr::Model viking =
+      sktr::Model{"viking", "models/viking_room.obj", "models/"};
   viking.texture =
       sktr::TextureManager::GetInstance().Load("resources/viking_room.png");
 

@@ -20,6 +20,7 @@ Model::Model(const std::string name, const std::string modelPath,
                         mtlPathC)) {
     throw std::runtime_error(warn + err);
   }
+  std::cout << materials.size() << std::endl;
 
   std::unordered_map<Vertex, uint32_t> uniqueVertices{};
 

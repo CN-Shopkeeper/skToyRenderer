@@ -58,7 +58,7 @@ struct Vertex {
     attributeDescriptions[2].offset = offsetof(Vertex, normal);
 
     attributeDescriptions[3].binding = 0;
-    attributeDescriptions[3].location = 2;
+    attributeDescriptions[3].location = 3;
     attributeDescriptions[3].format = vk::Format::eR32G32Sfloat;
     attributeDescriptions[3].offset = offsetof(Vertex, texCoord);
 

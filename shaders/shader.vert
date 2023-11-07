@@ -20,8 +20,8 @@ layout(push_constant) uniform PushConstant{
 }pc;
 
 void main() {
-    fragPos = ubo.proj * ubo.view * pc.model *  vec4(inPosition,  1.0);
-    gl_Position = fragPos;
+    fragPos = inPosition;
+    gl_Position = ubo.proj * ubo.view * pc.model *  vec4(inPosition,  1.0);
     fragColor = inColor;
     fragTexCoord = inTexCoord;
     fragNormal = inNormal;
