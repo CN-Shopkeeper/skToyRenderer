@@ -1,5 +1,5 @@
 build/**
-shader/**.spv
+shaders/**.spv
 .vscode/**
 
 CMakeLists.txt.user
