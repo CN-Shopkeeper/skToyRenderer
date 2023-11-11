@@ -52,6 +52,7 @@ class Context final : public Singlton<Context> {
   SwapChainSupportDetails QuerySwapChainSupport(vk::PhysicalDevice device);
 
  private:
+  vk::DebugUtilsMessengerEXT messenger;
   CreateSurfaceFunc func_;
 
   void createInstance(const std::vector<const char *> &extensions);

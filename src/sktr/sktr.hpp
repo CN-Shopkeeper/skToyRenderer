@@ -3,8 +3,8 @@
 #include "sktr/core/context.hpp"
 
 namespace sktr {
-void Init(const std::vector<const char *> &extensions, CreateSurfaceFunc func,
-          int w, int h);
+void Init(std::vector<const char *> &extensions, CreateSurfaceFunc func, int w,
+          int h);
 void Quit();
 
 void ResizeSwapchainImage(int w, int h);

@@ -1,5 +1,5 @@
 #version 450
-
+#extension GL_EXT_debug_printf : enable
 layout(set=0, binding = 0) uniform UniformBufferObject {
     mat4 view;
     mat4 proj;
@@ -20,6 +20,8 @@ layout(push_constant) uniform PushConstant{
 }pc;
 
 void main() {
+    float myfloat = 3.1415f;
+    debugPrintfEXT("My float is %f", myfloat);
     gl_Position = ubo.proj * ubo.view * pc.model *  vec4(inPosition,  1.0);
     fragPos = inPosition;
     fragColor = inColor;

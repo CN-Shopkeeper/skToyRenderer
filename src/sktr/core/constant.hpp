@@ -7,7 +7,8 @@ constexpr uint32_t WindowHeight = 600;
 const std::vector<const char*> ValidationLayers = {
     "VK_LAYER_KHRONOS_validation"};
 const std::vector<const char*> DeviceExtensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME};
 
 // const std::string MODEL_PATH = "models/CYG.obj";
 const std::string MODEL_PATH = "models/viking_room.obj";

@@ -1,9 +1,15 @@
 #include "sktr.hpp"
 
+#include "sktr/core/constant.hpp"
+
 namespace sktr {
 
-void Init(const std::vector<const char *> &extensions, CreateSurfaceFunc func,
-          int w, int h) {
+void Init(std::vector<const char *> &extensions, CreateSurfaceFunc func, int w,
+          int h) {
+  if (EnableValidationLayers) {
+    extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    extensions.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
+  }
   Context::Init(extensions, func);
   auto &ctx = Context::GetInstance();
   // ! CommandPool before renderer

@@ -1,8 +1,52 @@
 #include "context.hpp"
 
 #include "constant.hpp"
-
 namespace sktr {
+static VKAPI_ATTR VkBool32 VKAPI_CALL
+DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+              VkDebugUtilsMessageTypeFlagsEXT messageType,
+              const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+              void* pUserData) {
+  // std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+  // vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo
+  if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+    // 处理调试信息，可以在这里输出到控制台或日志文件中
+    printf("Validation layer: %s\n", pCallbackData->pMessage);
+  }
+  return VK_FALSE;
+}
+
+inline vk::Result CreateDebugUtilsMessengerEXT(
+    vk::Instance instance,
+    const vk::DebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+    const vk::AllocationCallbacks* pAllocator,
+    vk::DebugUtilsMessengerEXT* pDebugMessenger) {
+  auto func = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+      instance.getProcAddr("vkCreateDebugUtilsMessengerEXT"));
+  if (func != nullptr) {
+    return static_cast<vk::Result>(
+        func(static_cast<VkInstance>(instance),
+             reinterpret_cast<const VkDebugUtilsMessengerCreateInfoEXT*>(
+                 pCreateInfo),
+             reinterpret_cast<const VkAllocationCallbacks*>(pAllocator),
+             reinterpret_cast<VkDebugUtilsMessengerEXT*>(pDebugMessenger)));
+  } else {
+    return vk::Result::eErrorExtensionNotPresent;
+  }
+}
+
+inline void DestroyDebugUtilsMessengerEXT(
+    vk::Instance instance, vk::DebugUtilsMessengerEXT debugMessenger,
+    const vk::AllocationCallbacks* pAllocator) {
+  auto func = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
+      instance.getProcAddr("vkDestroyDebugUtilsMessengerEXT"));
+  if (func != nullptr) {
+    func(static_cast<VkInstance>(instance),
+         static_cast<VkDebugUtilsMessengerEXT>(debugMessenger),
+         reinterpret_cast<const VkAllocationCallbacks*>(pAllocator));
+  }
+}
+
 Context::Context(const std::vector<const char*>& extensions,
                  CreateSurfaceFunc func)
     : func_(func) {
@@ -15,6 +59,9 @@ Context::Context(const std::vector<const char*>& extensions,
 Context::~Context() {
   instance.destroySurfaceKHR(surface);
   device.destroy();
+  if (EnableValidationLayers) {
+    DestroyDebugUtilsMessengerEXT(instance, messenger, nullptr);
+  }
   instance.destroy();
 }
 
@@ -36,12 +83,34 @@ void Context::createInstance(const std::vector<const char*>& extensions) {
     } else {
       instanceInfo.setPEnabledLayerNames(ValidationLayers);
     }
+    vk::ValidationFeatureEnableEXT feature[] = {
+        vk::ValidationFeatureEnableEXT::eDebugPrintf};
+    vk::ValidationFeaturesEXT valFeatures;
+    valFeatures.setEnabledValidationFeatures(feature);
+    instanceInfo.setPNext(&valFeatures);
   }
   vk::ApplicationInfo appInfo;
   appInfo.setApiVersion(VK_API_VERSION_1_3).setPEngineName("SDL");
   instanceInfo.setPApplicationInfo(&appInfo).setPEnabledExtensionNames(
       extensions);
   instance = vk::createInstance(instanceInfo);
+
+  if (EnableValidationLayers) {
+    vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
+    // 初始化 debugCreateInfo 的其他字段...
+    debugCreateInfo
+        .setMessageSeverity(vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+                            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError |
+                            vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo)
+        .setMessageType(vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance);
+    debugCreateInfo.pfnUserCallback = DebugCallback;
+    vk::Result result = CreateDebugUtilsMessengerEXT(instance, &debugCreateInfo,
+                                                     nullptr, &messenger);
+  }
+
+  // messenger = instance.createDebugUtilsMessengerEXT(debugCreateInfo);
 }
 
 bool Context::checkValidationLayerSupport() {
