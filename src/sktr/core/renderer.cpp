@@ -14,11 +14,11 @@ Renderer::Renderer(int width, int height, int maxFlightCount)
 
   initMats();
   SetProjection(glm::radians(45.0f), width / (float)height, 0.1f, 10.0f);
-  SetView(glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-                      glm::vec3(0.0f, 0.0f, 1.0f)));
+  SetView(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+          glm::vec3(0.0f, 0.0f, 1.0f));
 
   worldUniformDescriptorSets_ =
-      DescriptorSetManager::GetInstance().AllocBufferSets(maxFlightCount);
+      DescriptorSetManager::GetInstance().AllocWorldBufferSets(maxFlightCount);
   updateDescriptorSets();
 
   // createWhiteTexture();
@@ -32,7 +32,8 @@ Renderer::~Renderer() {
   // ! 应当手动调用Texture Manager的clear，
   // ! 因为单例的析构函数在最后，会导致内部的texture析构时device以及为空
   TextureManager::GetInstance().Clear();
-  uniformWorldBuffers.clear();
+  uniformVPBuffers.clear();
+  uniformLightBuffers.clear();
   for (auto& sem : imageAvaliableSems_) {
     device.destroySemaphore(sem);
   }
@@ -155,12 +156,16 @@ void Renderer::DrawModel(const Model& model) {
 
   cmdBuff.bindPipeline(vk::PipelineBindPoint::eGraphics,
                        renderProcess->graphicsPipelineWithTriangleTopology);
+  //  todo
   cmdBuff.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
                              renderProcess->pipelineLayout, 0,
                              worldUniformDescriptorSets_[curFrame_].set, {});
   cmdBuff.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
                              renderProcess->pipelineLayout, 1,
                              model.texture->set.set, {});
+  cmdBuff.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                             renderProcess->pipelineLayout, 2,
+                             model.material->set.set, {});
   cmdBuff.bindVertexBuffers(0, model.vertexBuffer->buffer, offset);
   cmdBuff.bindIndexBuffer(model.indicesBuffer->buffer, 0,
                           vk::IndexType::eUint32);
@@ -254,29 +259,44 @@ void Renderer::createFences() {
 }
 
 void Renderer::createUniformBuffers() {
-  size_t size = sizeof(WorldMatrices);
-  uniformWorldBuffers.resize(maxFlightCount_);
+  size_t sizeVPM = sizeof(ViewProjectMatrices);
+  size_t sizeLM = sizeof(LightInfo);
+  uniformVPBuffers.resize(maxFlightCount_);
+  uniformLightBuffers.resize(maxFlightCount_);
 
   for (size_t i = 0; i < maxFlightCount_; i++) {
-    uniformWorldBuffers[i].reset(
-        new Buffer{size, vk::BufferUsageFlagBits::eUniformBuffer,
+    uniformVPBuffers[i].reset(
+        new Buffer{sizeVPM, vk::BufferUsageFlagBits::eUniformBuffer,
+                   vk::MemoryPropertyFlagBits::eHostCoherent |
+                       vk::MemoryPropertyFlagBits::eHostVisible});
+    uniformLightBuffers[i].reset(
+        new Buffer{sizeLM, vk::BufferUsageFlagBits::eUniformBuffer,
                    vk::MemoryPropertyFlagBits::eHostCoherent |
                        vk::MemoryPropertyFlagBits::eHostVisible});
   }
 }
 
-void Renderer::bufferWorldData() {
-  for (int i = 0; i < uniformWorldBuffers.size(); i++) {
-    memcpy(uniformWorldBuffers[i]->map, &worldMatrices_,
-           sizeof(worldMatrices_));
+void Renderer::bufferVPData() {
+  for (int i = 0; i < uniformVPBuffers.size(); i++) {
+    memcpy(uniformVPBuffers[i]->map, &vpMatrices_, sizeof(vpMatrices_));
+  }
+}
+
+void Renderer::bufferLightData() {
+  for (int i = 0; i < uniformLightBuffers.size(); i++) {
+    memcpy(uniformLightBuffers[i]->map, &lightMatrices_,
+           sizeof(lightMatrices_));
   }
 }
 
 void Renderer::SetDrawColor(const Color& color) { drawColor_ = color; }
 
 void Renderer::initMats() {
-  worldMatrices_.proj = glm::identity<glm::mat4>();
-  worldMatrices_.view = glm::identity<glm::mat4>();
+  vpMatrices_.proj = glm::identity<glm::mat4>();
+  vpMatrices_.view = glm::identity<glm::mat4>();
+
+  lightMatrices_.position = glm::zero<glm::vec3>();
+  lightMatrices_.intensity = glm::zero<glm::float32>();
 }
 
 // 创建一个只有一个像素的图像，用于绘制线段
@@ -286,14 +306,23 @@ void Renderer::initMats() {
 // }
 
 void Renderer::SetProjection(float fov, float aspect, float near, float far) {
-  worldMatrices_.proj = glm::perspective(fov, aspect, near, far);
-  worldMatrices_.proj[1][1] *= -1;
-  bufferWorldData();
+  vpMatrices_.proj = glm::perspective(fov, aspect, near, far);
+  vpMatrices_.proj[1][1] *= -1;
+  bufferVPData();
 }
 
-void Renderer::SetView(Mat4 view) {
-  worldMatrices_.view = view;
-  bufferWorldData();
+void Renderer::SetView(const glm::vec3 eye, const glm::vec3 center,
+                       const glm::vec3 up) {
+  vpMatrices_.view = glm::lookAt(eye, center, up);
+  lightMatrices_.cameraPosition = eye;
+  bufferVPData();
+  bufferLightData();
+}
+
+void Renderer::SetLight(glm::vec3 lightPos, glm::float32 lightIntensity) {
+  lightMatrices_.position = lightPos;
+  lightMatrices_.intensity = lightIntensity;
+  bufferLightData();
 }
 
 void Renderer::copyBuffer(vk::Buffer& src, vk::Buffer& dst, size_t size,
@@ -308,19 +337,30 @@ void Renderer::copyBuffer(vk::Buffer& src, vk::Buffer& dst, size_t size,
 }
 
 void Renderer::updateDescriptorSets() {
-  for (int i = 0; i < worldUniformDescriptorSets_.size(); i++) {
-    std::vector<vk::WriteDescriptorSet> writeInfos(1);
+  for (int i = 0; i < maxFlightCount_; i++) {
+    std::vector<vk::WriteDescriptorSet> writeInfos(2);
     auto& set = worldUniformDescriptorSets_[i];
-    // bind MVP buffer
-    vk::DescriptorBufferInfo bufferInfoMVP;
-    bufferInfoMVP.setBuffer(uniformWorldBuffers[i]->buffer)
+    // bind VP buffer
+    vk::DescriptorBufferInfo bufferInfoVP;
+    bufferInfoVP.setBuffer(uniformVPBuffers[i]->buffer)
         .setOffset(0)
-        .setRange(sizeof(worldMatrices_));
+        .setRange(sizeof(vpMatrices_));
+    vk::DescriptorBufferInfo bufferInfoLight;
+    bufferInfoLight.setBuffer(uniformLightBuffers[i]->buffer)
+        .setOffset(0)
+        .setRange(sizeof(LightInfo));
 
     writeInfos[0]
         .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-        .setBufferInfo(bufferInfoMVP)
+        .setBufferInfo(bufferInfoVP)
         .setDstBinding(0)
+        .setDstSet(set.set)
+        .setDstArrayElement(0)
+        .setDescriptorCount(1);
+    writeInfos[1]
+        .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+        .setBufferInfo(bufferInfoLight)
+        .setDstBinding(1)
         .setDstSet(set.set)
         .setDstArrayElement(0)
         .setDescriptorCount(1);

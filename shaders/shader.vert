@@ -20,8 +20,8 @@ layout(push_constant) uniform PushConstant{
 }pc;
 
 void main() {
-    float myfloat = 3.1415f;
-    debugPrintfEXT("My float is %f", myfloat);
+    // float myfloat = 3.1415f;
+    // debugPrintfEXT("My float is %f", myfloat);
     gl_Position = ubo.proj * ubo.view * pc.model *  vec4(inPosition,  1.0);
     fragPos = inPosition;
     fragColor = inColor;

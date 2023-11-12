@@ -10,17 +10,30 @@ Model::Model(const std::string name, const std::string modelPath,
     : name(name), modelMatrix(glm::identity<glm::mat4>()) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
-  std::vector<tinyobj::material_t> materials;
+  std::vector<tinyobj::material_t> materials_t;
   std::string warn;
   std::string err;
 
   const char* mtlPathC =
       mtlPath.empty() ? (const char*)__null : mtlPath.c_str();
-  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, modelPath.c_str(),
+  if (!tinyobj::LoadObj(&attrib, &shapes, &materials_t, &err, modelPath.c_str(),
                         mtlPathC)) {
     throw std::runtime_error(warn + err);
   }
-  std::cout << materials.size() << std::endl;
+
+  if (materials_t.size() > 0) {
+    materialInfos.resize(materials_t.size());
+    for (auto i = 0; i < materials_t.size(); ++i) {
+      auto& material = materialInfos.at(i);
+      materialInfos[0].diffuse = {material.diffuse[0], material.diffuse[1],
+                                  material.diffuse[2]};
+      materialInfos[i].specular = {material.specular[0], material.specular[1],
+                                   material.specular[2]};
+    }
+
+    material.reset(new Material{});
+    memcpy(material->buffer->map, &materialInfos[0], sizeof(MaterialInfo));
+  }
 
   std::unordered_map<Vertex, uint32_t> uniqueVertices{};
 

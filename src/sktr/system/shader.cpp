@@ -51,18 +51,26 @@ void Shader::initStage() {
 }
 
 void Shader::initDescriptorSetLayouts() {
-  descriptorSetLayouts.resize(2);
+  descriptorSetLayouts.resize(3);
 
   auto &device = Context::GetInstance().device;
-  // mvp and color
+  // world: include 0: view, projection; 1: light
   vk::DescriptorSetLayoutBinding uboLayoutBinding;
   uboLayoutBinding.setBinding(0)
       .setDescriptorCount(1)
       .setDescriptorType(vk::DescriptorType::eUniformBuffer)
       .setStageFlags(vk::ShaderStageFlagBits::eVertex);
-  vk::DescriptorSetLayoutCreateInfo uboSetLayoutInfo;
-  uboSetLayoutInfo.setBindings(uboLayoutBinding);
-  descriptorSetLayouts[0] = device.createDescriptorSetLayout(uboSetLayoutInfo);
+  vk::DescriptorSetLayoutBinding lightBinding;
+  lightBinding.setBinding(1)
+      .setDescriptorCount(1)
+      .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+      .setStageFlags(vk::ShaderStageFlagBits::eFragment);
+  vk::DescriptorSetLayoutCreateInfo worldSetLayoutInfo;
+  std::array<vk::DescriptorSetLayoutBinding, 2> bindings{uboLayoutBinding,
+                                                         lightBinding};
+  worldSetLayoutInfo.setBindings(bindings);
+  descriptorSetLayouts[0] =
+      device.createDescriptorSetLayout(worldSetLayoutInfo);
 
   // sampler
   vk::DescriptorSetLayoutBinding samplerLayoutBinding;
@@ -76,6 +84,18 @@ void Shader::initDescriptorSetLayouts() {
   samplerSetLayoutInfo.setBindings(samplerLayoutBinding);
   descriptorSetLayouts[1] =
       device.createDescriptorSetLayout(samplerSetLayoutInfo);
+
+  // material
+  vk::DescriptorSetLayoutBinding materialLayoutBinding;
+  materialLayoutBinding.setBinding(0)
+      .setDescriptorCount(1)
+      .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+      .setStageFlags(vk::ShaderStageFlagBits::eFragment);
+
+  vk::DescriptorSetLayoutCreateInfo materialSetLayoutInfo;
+  materialSetLayoutInfo.setBindings(materialLayoutBinding);
+  descriptorSetLayouts[2] =
+      device.createDescriptorSetLayout(materialSetLayoutInfo);
 }
 
 std::vector<vk::PushConstantRange> Shader::GetPushConstantRange() const {

@@ -13,7 +13,8 @@ class Renderer final {
   ~Renderer();
 
   void SetProjection(float fov, float aspect, float near, float far);
-  void SetView(Mat4 view);
+  void SetView(const glm::vec3 eye, const glm::vec3 center, const glm::vec3 up);
+  void SetLight(glm::vec3 lightPos, glm::float32 lightIntensity);
   void SetDrawColor(const Color& color);
 
   // 开启render pass 并绑定渲染管线
@@ -33,7 +34,8 @@ class Renderer final {
   int curFrame_;
   uint32_t imageIndex_;
 
-  WorldMatrices worldMatrices_;
+  ViewProjectMatrices vpMatrices_;
+  LightInfo lightMatrices_;
 
   std::vector<vk::CommandBuffer> cmdBuffs_;
 
@@ -50,7 +52,8 @@ class Renderer final {
 
   // std::vector<std::unique_ptr<Buffer>> hostColorBuffers_;
   // std::vector<std::unique_ptr<Buffer>> deviceColorBuffers_;
-  std::vector<std::unique_ptr<Buffer>> uniformWorldBuffers;
+  std::vector<std::unique_ptr<Buffer>> uniformVPBuffers;
+  std::vector<std::unique_ptr<Buffer>> uniformLightBuffers;
 
   std::vector<DescriptorSetManager::SetInfo> worldUniformDescriptorSets_;
   Texture* whiteTexture;
@@ -63,7 +66,8 @@ class Renderer final {
   void createBuffers();
   void createUniformBuffers();
 
-  void bufferWorldData();
+  void bufferVPData();
+  void bufferLightData();
 
   void initMats();
 

@@ -24,14 +24,16 @@ DescriptorSetManager::~DescriptorSetManager() {
 
 void DescriptorSetManager::createBufferSetPool() {
   vk::DescriptorPoolSize size;
+  // ×2是因为有world和material两个UniformBuffer
+
   size.setType(vk::DescriptorType::eUniformBuffer)
-      .setDescriptorCount(maxFlight_);
+      .setDescriptorCount(maxFlight_ * 2);
   vk::DescriptorPoolCreateInfo descriptorPoolInfo;
-  descriptorPoolInfo.setMaxSets(maxFlight_).setPoolSizes(size);
+  descriptorPoolInfo.setMaxSets(maxFlight_ * 2).setPoolSizes(size);
   auto pool =
       Context::GetInstance().device.createDescriptorPool(descriptorPoolInfo);
   bufferSetPool_.pool_ = pool;
-  bufferSetPool_.remainNum_ = maxFlight_;
+  bufferSetPool_.remainNum_ = maxFlight_ * 2;
 }
 
 void DescriptorSetManager::addImageSetPool() {
@@ -49,7 +51,7 @@ void DescriptorSetManager::addImageSetPool() {
 }
 
 std::vector<DescriptorSetManager::SetInfo>
-DescriptorSetManager::AllocBufferSets(uint32_t num) {
+DescriptorSetManager::AllocWorldBufferSets(uint32_t num) {
   std::vector<vk::DescriptorSetLayout> layouts(
       maxFlight_, Shader::GetInstance().descriptorSetLayouts[0]);
   vk::DescriptorSetAllocateInfo allocInfo;
@@ -64,6 +66,23 @@ DescriptorSetManager::AllocBufferSets(uint32_t num) {
     result[i].set = sets[i];
     result[i].pool = bufferSetPool_.pool_;
   }
+
+  return result;
+}
+
+DescriptorSetManager::SetInfo DescriptorSetManager::AllocMaterialBufferSet() {
+  std::vector<vk::DescriptorSetLayout> layouts(
+      maxFlight_, Shader::GetInstance().descriptorSetLayouts[2]);
+  vk::DescriptorSetAllocateInfo allocInfo;
+  allocInfo.setDescriptorPool(bufferSetPool_.pool_)
+      .setDescriptorSetCount(1)
+      .setSetLayouts(layouts);
+  auto sets = Context::GetInstance().device.allocateDescriptorSets(allocInfo);
+
+  SetInfo result;
+
+  result.set = sets[0];
+  result.pool = bufferSetPool_.pool_;
 
   return result;
 }

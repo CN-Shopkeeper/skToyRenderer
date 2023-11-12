@@ -75,6 +75,7 @@ int main(int argc, char** argv) {
   auto& renderer = sktr::getRenderer();
 
   renderer.SetDrawColor(sktr::Color{1, 1, 1});
+  renderer.SetLight({3, 3, 5}, 250);
 
   sktr::Model viking =
       sktr::Model{"viking", "models/viking_room.obj", "models/"};
@@ -134,7 +135,7 @@ int main(int argc, char** argv) {
     // assumes radians input
     cameraFront = polarVector(glm::radians(-pitch), glm::radians(-yaw));
 
-    renderer.SetView(glm::lookAt(eye, eye - cameraFront, upVector));
+    renderer.SetView(eye, eye - cameraFront, upVector);
 
     // static auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -154,6 +155,9 @@ int main(int argc, char** argv) {
   sktr::TextureManager::GetInstance().Destroy(viking.texture);
   viking.vertexBuffer.reset();
   viking.indicesBuffer.reset();
+
+  // todo: Material manager
+  viking.material.reset();
 
   sktr::Quit();
   SDL_DestroyWindow(window);

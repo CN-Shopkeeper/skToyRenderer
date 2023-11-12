@@ -71,9 +71,20 @@ struct Vertex {
   }
 };
 
-struct WorldMatrices {
+struct ViewProjectMatrices {
   alignas(16) glm::mat4 view;
   alignas(16) glm::mat4 proj;
+};
+
+struct LightInfo {
+  alignas(16) glm::vec3 cameraPosition;
+  alignas(16) glm::vec3 position;
+  alignas(4) glm::float32 intensity;
+};
+
+struct MaterialInfo {
+  alignas(16) glm::vec3 diffuse = {0.800000, 0.800000, 0.800000};
+  alignas(16) glm::vec3 specular{0.500000, 0.500000, 0.500000};
 };
 }  // namespace sktr
 

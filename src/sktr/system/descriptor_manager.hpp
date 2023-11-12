@@ -14,7 +14,8 @@ class DescriptorSetManager : public Singlton<DescriptorSetManager> {
   DescriptorSetManager(uint32_t maxFlight);
   ~DescriptorSetManager();
 
-  std::vector<SetInfo> AllocBufferSets(uint32_t num);
+  std::vector<SetInfo> AllocWorldBufferSets(uint32_t num);
+  SetInfo AllocMaterialBufferSet();
 
   SetInfo AllocImageSet();
 
