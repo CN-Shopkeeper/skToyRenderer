@@ -27,13 +27,13 @@ void DescriptorSetManager::createBufferSetPool() {
   // ×2是因为有world和material两个UniformBuffer
 
   size.setType(vk::DescriptorType::eUniformBuffer)
-      .setDescriptorCount(maxFlight_ * 2);
+      .setDescriptorCount(maxFlight_ * 3);
   vk::DescriptorPoolCreateInfo descriptorPoolInfo;
-  descriptorPoolInfo.setMaxSets(maxFlight_ * 2).setPoolSizes(size);
+  descriptorPoolInfo.setMaxSets(maxFlight_ * 3).setPoolSizes(size);
   auto pool =
       Context::GetInstance().device.createDescriptorPool(descriptorPoolInfo);
   bufferSetPool_.pool_ = pool;
-  bufferSetPool_.remainNum_ = maxFlight_ * 2;
+  bufferSetPool_.remainNum_ = maxFlight_ * 3;
 }
 
 void DescriptorSetManager::addImageSetPool() {

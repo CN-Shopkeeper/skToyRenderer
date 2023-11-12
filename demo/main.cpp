@@ -23,8 +23,10 @@ int getScaleFactor() {
 
 glm::vec3 polarVector(float p, float y) {
   // this form is already normalized
-  return glm::vec3(std::cos(y) * std::cos(p), std::sin(y) * std::cos(p),
-                   std::sin(p));
+  // return glm::vec3(std::cos(y) * std::cos(p), std::sin(y) * std::cos(p),
+  //                  std::sin(p));
+  return glm::vec3(std::cos(y) * std::cos(p), std::sin(p),
+                   -std::sin(y) * std::cos(p));  // 反转 Z 轴方向
 }
 
 // clamp pitch to [-89, 89]
@@ -38,7 +40,7 @@ float clampYaw(float y) {
   return y - ((int)temp - (temp < 0.0f ? 1 : 0)) * 360.0f;
 }
 
-const float sensitivity = 0.01f;
+const float sensitivity = 0.1f;
 
 int main(int argc, char** argv) {
   SDL_CHECK(SDL_Init(SDL_INIT_EVERYTHING));
@@ -78,17 +80,23 @@ int main(int argc, char** argv) {
   renderer.SetLight({3, 3, 5}, 250);
 
   sktr::Model viking =
-      sktr::Model{"viking", "models/viking_room.obj", "models/"};
+      sktr::Model{"viking", "models/viking_room.obj", "models/", false, true};
   viking.texture =
       sktr::TextureManager::GetInstance().Load("resources/viking_room.png");
+
+  sktr::Model floor = sktr::Model{"floor", "models/floor.obj", "models/"};
+  floor.texture = sktr::TextureManager::GetInstance().CreateWhiteTexture();
+  floor.SetModelM(
+      glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -0.10f, 0.0f)) *
+      glm::scale(glm::mat4(1.0f), glm::vec3(0.1, 0.1, 0.1)));
 
   bool shouldClose = false;
   SDL_Event event;
 
-  glm::vec3 eye = {2, 0, 2};
-  float pitch = -45.0f, yaw = 0.0f;
-  glm::vec3 cameraFront = {0, 0, 1};
-  const glm::vec3 upVector = {0.f, 0.f, 1.f};
+  glm::vec3 eye = {2, 2, 2};
+  float pitch = -30.0f, yaw = 45.0f;
+  glm::vec3 cameraFront = {0, 0, 0};
+  const glm::vec3 upVector = {0.f, 1.f, 0.f};
   while (!shouldClose) {
     float xrel = 0;
     float yrel = 0;
@@ -133,7 +141,7 @@ int main(int argc, char** argv) {
     pitch = clampPitch(pitch - sensitivity * yrel);
 
     // assumes radians input
-    cameraFront = polarVector(glm::radians(-pitch), glm::radians(-yaw));
+    cameraFront = polarVector(-glm::radians(pitch), -glm::radians(yaw));
 
     renderer.SetView(eye, eye - cameraFront, upVector);
 
@@ -147,6 +155,8 @@ int main(int argc, char** argv) {
     //                              glm::vec3(0.0f, 0.0f, 1.0f)));
     renderer.StartRender();
     renderer.SetDrawColor({1, 1, 1});
+
+    renderer.DrawModel(floor);
     renderer.DrawModel(viking);
     renderer.EndRender();
     SDL_Delay(30);
@@ -158,6 +168,10 @@ int main(int argc, char** argv) {
 
   // todo: Material manager
   viking.material.reset();
+
+  floor.vertexBuffer.reset();
+  floor.indicesBuffer.reset();
+  floor.material.reset();
 
   sktr::Quit();
   SDL_DestroyWindow(window);

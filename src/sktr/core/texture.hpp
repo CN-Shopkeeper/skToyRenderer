@@ -97,6 +97,8 @@ class TextureManager final {
   void Clear();
   void updateDescriptorSet();
 
+  Texture* CreateWhiteTexture();
+
  private:
   static std::unique_ptr<TextureManager> instance_;
 

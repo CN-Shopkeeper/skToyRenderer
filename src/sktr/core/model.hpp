@@ -21,7 +21,8 @@ class Model final {
   std::unique_ptr<Buffer> indicesBuffer;
 
   Model(const std::string name, const std::string modelPath,
-        const std::string mtlPath = "", bool normalized = false);
+        const std::string mtlPath = "", bool normalized = false,
+        bool yUp = false);
 
   void SetModelM(glm::mat4 model) { modelMatrix = model; }
 

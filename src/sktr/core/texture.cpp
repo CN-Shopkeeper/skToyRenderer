@@ -198,6 +198,7 @@ void Texture::init(void* data, uint32_t w, uint32_t h, uint32_t mipLevels,
                    vk::SampleCountFlagBits numSamples, vk::Format format,
                    vk::ImageTiling tiling, vk::ImageUsageFlags usage,
                    vk::MemoryPropertyFlags properties) {
+  mipLevels_ = mipLevels;
   const uint32_t size = w * h * 4;
 
   std::unique_ptr<Buffer> buffer(
@@ -280,6 +281,7 @@ void Texture::transformData2Image(Buffer& buffer, uint32_t w, uint32_t h) {
 }
 
 void Texture::generateMipmaps(int32_t texWidth, int32_t texHeight) {
+  std::cout << mipLevels_ << std::endl;
   vk::FormatProperties formatProperties =
       Context::GetInstance().phyDevice.getFormatProperties(
           vk::Format::eR8G8B8A8Srgb);
@@ -434,5 +436,15 @@ void TextureManager::Destroy(Texture* texture) {
     datas_.erase(it);
     return;
   }
+}
+
+Texture* TextureManager::CreateWhiteTexture() {
+  unsigned char data[] = {0xFF, 0xFF, 0xFF, 0xFF};
+  return Create((void*)data, 1, 1, 1, vk::SampleCountFlagBits::e1,
+                vk::Format::eR8G8B8A8Srgb, vk::ImageTiling::eOptimal,
+                vk::ImageUsageFlagBits::eTransferDst |
+                    vk::ImageUsageFlagBits::eSampled |
+                    vk::ImageUsageFlagBits::eTransferSrc,
+                vk::MemoryPropertyFlagBits::eDeviceLocal);
 }
 }  // namespace sktr

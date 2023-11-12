@@ -6,7 +6,7 @@
 #include "context.hpp"
 namespace sktr {
 Model::Model(const std::string name, const std::string modelPath,
-             const std::string mtlPath, bool normalized)
+             const std::string mtlPath, bool normalized, bool yUp)
     : name(name), modelMatrix(glm::identity<glm::mat4>()) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
@@ -54,6 +54,12 @@ Model::Model(const std::string name, const std::string modelPath,
       vertex.normal = {attrib.normals[3 * index.normal_index + 0],
                        attrib.normals[3 * index.normal_index + 1],
                        attrib.normals[3 * index.normal_index + 2]};
+      if (yUp) {
+        std::swap(vertex.pos.y, vertex.pos.z);
+        std::swap(vertex.pos.z, vertex.pos.x);
+        std::swap(vertex.normal.y, vertex.normal.z);
+        std::swap(vertex.normal.z, vertex.normal.x);
+      }
 
       vertex.texCoord = {attrib.texcoords[2 * index.texcoord_index + 0],
                          1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
