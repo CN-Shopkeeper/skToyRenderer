@@ -40,4 +40,13 @@ target_link_libraries(${DemoName} PRIVATE sktr)
 
 ## demo 运行效果
 
-![3D demo snapshot](snapshots/3d%20demo.gif)
+1. branch 0.0.1_base
+   ![branch 0.0.1_base](snapshots/0_0_1_base.png)
+
+2. branch 0.0.2_blinn-phong
+   ![branch 0.0.2_blinn-phong](snapshots/0_0_2_blinn_phong.png)
+
+## 更新日志
+
+[x] 2023年10月20日-基础模型加载
+[x] 2023年11月12日-布林冯着色模型
